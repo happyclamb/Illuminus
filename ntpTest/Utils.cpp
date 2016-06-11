@@ -2,19 +2,24 @@
 
 #include "PinDefns.h"
 
-int getAddress() {
-  int returnValue = 0;
+int getAddress(bool forceReread) {
+  int static returnAddress = -1;
 
-  if(digitalRead(ADDR_0_PIN) == LOW)
-    returnValue += 1;
-  if(digitalRead(ADDR_1_PIN) == LOW)
-    returnValue += 2;
-  if(digitalRead(ADDR_2_PIN) == LOW)
-    returnValue += 4;
-  if(digitalRead(ADDR_3_PIN) == LOW)
-    returnValue += 8;
-  if(digitalRead(ADDR_4_PIN) == LOW)
-    returnValue += 16;
+  if (returnAddress == -1 || forceReread == true)
+  {
+    returnAddress = 0;
 
-  return (returnValue);
+    if(digitalRead(ADDR_0_PIN) == LOW)
+      returnAddress += 1;
+    if(digitalRead(ADDR_1_PIN) == LOW)
+      returnAddress += 2;
+    if(digitalRead(ADDR_2_PIN) == LOW)
+      returnAddress += 4;
+    if(digitalRead(ADDR_3_PIN) == LOW)
+      returnAddress += 8;
+    if(digitalRead(ADDR_4_PIN) == LOW)
+      returnAddress += 16;
+  }
+
+  return (returnAddress);
 }

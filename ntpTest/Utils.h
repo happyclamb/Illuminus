@@ -3,6 +3,6 @@
 
 #include <Arduino.h>
 
-int getAddress();
+int getAddress(bool forceReread = false);
 
 #endif // __UTILS_H__
