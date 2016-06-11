@@ -27,11 +27,11 @@ void RadioManager::init() {
 
 	// Open a writing and reading pipe on each radio, with opposite addresses
 	if(getAddress() == 0) {
-		rf24.openWritingPipe(radioAddresses[1]);
-		rf24.openReadingPipe(1,radioAddresses[0]);
-	} else {
 		rf24.openWritingPipe(radioAddresses[0]);
 		rf24.openReadingPipe(1,radioAddresses[1]);
+	} else {
+		rf24.openWritingPipe(radioAddresses[1]);
+		rf24.openReadingPipe(1,radioAddresses[0]);
 	}
 
 	// kick off with listening
@@ -40,6 +40,8 @@ void RadioManager::init() {
 
 
 void RadioManager::setMillisOffset(long newOffset) {
+	Serial.print("RadioManager::setMillisOffset    newOffset: ");
+	Serial.println(newOffset);
 	currentMillisOffset = newOffset;
 }
 
@@ -49,17 +51,20 @@ unsigned long RadioManager::getAdjustedMillis() {
 
 long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 {
-	long returnOffSet = 0;
+	static int getOffsetCount=0;
 
   // First, stop listening so we can talk.
-  Serial.println("Sending Timing Request...");
+  Serial.print("RadioManager::blockingGetOffsetFromServer    ");
+	Serial.println(getOffsetCount++);
+
   rf24.stopListening();
 
   // Take the time, and send it.  This will block until complete
   TimeCounter pingOut;
   pingOut.client_start = micros();
   if (rf24.write(&pingOut, sizeof(TimeCounter)) == false ) {
-     Serial.println("failed");
+     Serial.println("Error: Write Failed");
+		 return 0;
   }
 
   // Now, continue listening
@@ -82,40 +87,41 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 
   if ( timeout ){
       // Handle the timeout
-      Serial.println("Failed, response timed out.");
-  } else {
-      // Grab the response, compare, and send to debugging spew
-      TimeCounter timeData;
-      rf24.read( &timeData, sizeof(TimeCounter) );
-      timeData.client_end = micros();
+      Serial.println("Error: Response timed out.");
+			return 0;
+  }
 
-      // Spew it
+	// Grab the response, compare, and send to debugging spew
+	TimeCounter timeData;
+	rf24.read( &timeData, sizeof(TimeCounter) );
+	timeData.client_end = micros();
+
+  // Spew it
 /*
-      Serial.print("VagueTxRxTime: ");
-      Serial.print(timeData.client_end - timeData.client_start);
-      Serial.print("    client_start: ");
-      Serial.print(timeData.client_start);
-      Serial.print("    client_end: ");
-      Serial.print(timeData.client_end);
-      Serial.print("    server_start: ");
-      Serial.print(timeData.server_start);
-      Serial.print("    server_end: ");
-      Serial.print(timeData.server_end);
+	Serial.print("VagueTxRxTime: ");
+	Serial.print(timeData.client_end - timeData.client_start);
+	Serial.print("    client_start: ");
+	Serial.print(timeData.client_start);
+	Serial.print("    client_end: ");
+	Serial.print(timeData.client_end);
+	Serial.print("    server_start: ");
+	Serial.print(timeData.server_start);
+	Serial.print("    server_end: ");
+	Serial.print(timeData.server_end);
 */
-      // Finally have enough data to Do The Math
-      // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-      long offSet = ((timeData.server_start - timeData.client_start) + (timeData.server_end-timeData.client_end)) / 2;
-      long rtripDelay = (timeData.client_end-timeData.client_start) - (timeData.server_end-timeData.server_start);
+  // Finally have enough data to Do The Math
+  // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
+  long offSet = ((timeData.server_start - timeData.client_start) + (timeData.server_end-timeData.client_end)) / 2;
+  long rtripDelay = (timeData.client_end-timeData.client_start) - (timeData.server_end-timeData.server_start);
 
-      offSet = offSet / 1000;
-      rtripDelay = rtripDelay / 1000;
+  offSet = offSet / 1000;
+  rtripDelay = rtripDelay / 1000;
 
-			returnOffSet = offSet;
 /*
-      Serial.print("    offSet: ");
-      Serial.print(offSet);
-      Serial.print("    rtripDelay: ");
-      Serial.print(rtripDelay);
+  Serial.print("    offSet: ");
+  Serial.print(offSet);
+  Serial.print("    rtripDelay: ");
+  Serial.print(rtripDelay);
 */
 /*
       long offSet = ((t1 - t0) + (t2-t3)) / 2;
@@ -125,9 +131,8 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
   t2 == server_end
   t3 == client_end
 */
-  }
 
-  return(returnOffSet);
+  return(offSet);
 }
 
 

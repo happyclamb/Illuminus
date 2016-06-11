@@ -79,17 +79,29 @@ void loop() {
 
   int timeDelay = 100;
   if (getAddress() == 0) {
-
-    unsigned long preSendTime = millis();
-
-    unsigned long maxSendTimeMicros = 20000;
-    long newOffset = radioMan.blockingGetOffsetFromServer(maxSendTimeMicros);
-    radioMan.setMillisOffset(newOffset);
-
-    long remainingTime = (preSendTime + timeDelay) - millis();
-    if(remainingTime > 0)
-      delay(remainingTime);
-  } else {
     radioMan.blockingListenForRadioRequest(timeDelay);
+  } else {
+
+    int timeBetweenChecks = 1000;
+    static unsigned long lastCheck = 0;
+
+    if(millis() > lastCheck + timeBetweenChecks)
+    {
+      lastCheck = millis();
+      unsigned long preSendTime = millis();
+
+      unsigned long maxSendTimeMicros = 20000;
+      long newOffset = radioMan.blockingGetOffsetFromServer(maxSendTimeMicros);
+      if(newOffset != 0)
+        radioMan.setMillisOffset(newOffset);
+
+      long remainingTime = (preSendTime + timeDelay) - millis();
+      if(remainingTime > 0)
+        delay(remainingTime);
+    }
+    else
+    {
+      delay(timeDelay);
+    }
   }
 }
