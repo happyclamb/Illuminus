@@ -40,11 +40,18 @@ void setup() {
 
 int getAddress() {
   int returnValue = 0;
-  returnValue += digitalRead(ADDR_0) * 1;
-  returnValue += digitalRead(ADDR_1) * 2;
-  returnValue += digitalRead(ADDR_2) * 4;
-  returnValue += digitalRead(ADDR_3) * 8;
-  returnValue += digitalRead(ADDR_4) * 16;
+
+  if(digitalRead(ADDR_0) == LOW)
+    returnValue += 1;
+  if(digitalRead(ADDR_1) == LOW)
+    returnValue += 2;
+  if(digitalRead(ADDR_2) == LOW)
+    returnValue += 4;
+  if(digitalRead(ADDR_3) == LOW)
+    returnValue += 8;
+  if(digitalRead(ADDR_4) == LOW)
+    returnValue += 16;
+
   return (returnValue); 
 }
 
