@@ -2,16 +2,6 @@
 
 #include "PinDefns.h"
 
-long millisOffset;
-
-void setMillisOffset(long newOffset) {
-	millisOffset = newOffset;
-}
-
-unsigned long getAdjustedMillis() {
-	return millis() + millisOffset;
-}
-
 int getAddress() {
   int returnValue = 0;
 
