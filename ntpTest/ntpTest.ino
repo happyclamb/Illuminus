@@ -86,7 +86,7 @@ void WalkingLED() {
   for(int i=0; i<NUM_RGB_LEDS; i++)
   {
     if(litIndex == i)
-      ledstrip[i] = CRGB(0,50,50);
+      ledstrip[i] = CRGB(0,25,25);
     else
       ledstrip[i] = CRGB(0,0,0);
   }
@@ -176,8 +176,9 @@ unsigned long handleTimingRequest(unsigned long maxListenTimeout)
       Serial.print(timeData.server_end);
 */
       // Finally have enough data to Do The Math
-      unsigned long offSet = ((timeData.server_start - timeData.client_start) + (timeData.server_end-timeData.client_end)) / 2;
-      unsigned long rtripDelay = (timeData.client_end-timeData.client_start) - (timeData.server_end-timeData.server_start);
+      // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
+      long offSet = ((timeData.server_start - timeData.client_start) + (timeData.server_end-timeData.client_end)) / 2;
+      long rtripDelay = (timeData.client_end-timeData.client_start) - (timeData.server_end-timeData.server_start);
 
       offSet = offSet / 1000;
       rtripDelay = rtripDelay / 1000;
@@ -189,8 +190,8 @@ unsigned long handleTimingRequest(unsigned long maxListenTimeout)
 */
       setMillisOffset(offSet+rtripDelay);
 /*
-      unsigned long offSet = ((t1 - t0) + (t2-t3)) / 2;
-      unsigned long rtripDelay = (t3-t0) - (t2-t1)
+      long offSet = ((t1 - t0) + (t2-t3)) / 2;
+      long rtripDelay = (t3-t0) - (t2-t1)
   t0 == client_start
   t1 == server_start
   t2 == server_end

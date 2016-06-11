@@ -2,9 +2,9 @@
 
 #include "PinDefns.h"
 
-unsigned long millisOffset;
+long millisOffset;
 
-void setMillisOffset(unsigned long newOffset) {
+void setMillisOffset(long newOffset) {
 	millisOffset = newOffset;
 }
 

@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-void setMillisOffset(unsigned long newOffset);
+void setMillisOffset(long newOffset);
 unsigned long getAdjustedMillis();
 int getAddress();
 
