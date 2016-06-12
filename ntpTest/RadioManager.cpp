@@ -111,18 +111,18 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 */
   // Finally have enough data to Do The Math
   // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-  long offSet = ((timeData.server_start - timeData.client_start) + (timeData.server_end-timeData.client_end)) / 2;
-  long rtripDelay = (timeData.client_end-timeData.client_start) - (timeData.server_end-timeData.server_start);
-
-  offSet = offSet / 1000;
-  rtripDelay = rtripDelay / 1000;
+  long offSet = ((long)(timeData.server_start - timeData.client_start) + (long)(timeData.server_end - timeData.client_end)) / (long)2;
+  long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
 
 /*
-  Serial.print("    offSet: ");
+	Serial.print("    offSet: ");
   Serial.print(offSet);
-  Serial.print("    rtripDelay: ");
-  Serial.print(rtripDelay);
+  Serial.print("    halfRtripDelay: ");
+  Serial.print(halfRtripDelay);
 */
+	// Need to convert from Micros to Millis
+  offSet = ( offSet + halfRtripDelay ) / 1000;
+
 /*
       long offSet = ((t1 - t0) + (t2-t3)) / 2;
       long rtripDelay = (t3-t0) - (t2-t1)
@@ -130,6 +130,36 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
   t1 == server_start
   t2 == server_end
   t3 == client_end
+
+	// Math for Server running ahead
+	long offSet = ((t1 - t0) + (t2-t3)) / 2;
+	long rtripDelay = (t3-t0) - (t2-t1)
+			t0 == client_start			1000
+			t1 == server_start			2000
+			t2 == server_end				2010
+			t3 == client_end				1110
+
+			2000-1000   +   2010-1110
+			       1000 + 900
+						 			1900/2 == 950
+
+			1110-1000 -  2010-2000
+			110 -  10  == 100
+
+	// Math for Server running behind
+	long offSet = ((t1 - t0) + (t2-t3)) / 2;
+	long rtripDelay = (t3-t0) - (t2-t1)
+			t0 == client_start			2000
+			t1 == server_start			1000
+			t2 == server_end				1010
+			t3 == client_end				2110
+
+			1000-2000  +   1010-2110
+			-1000 +   -1100
+						-2100/2 == -1050
+
+			2110-2000 - 1010-1000
+			110 - 10 == 100
 */
 
   return(offSet);
@@ -137,7 +167,7 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 
 
 void RadioManager::blockingListenForRadioRequest(unsigned long listenLength) {
-
+	static int getOffsetCount=0;
 	unsigned long startTime = millis();
 
 	while(millis() < startTime + listenLength)
@@ -157,7 +187,8 @@ void RadioManager::blockingListenForRadioRequest(unsigned long listenLength) {
 
 	    rf24.startListening();                                       // Now, resume listening so we catch the next packets.
 
-	    Serial.println("Sent response");
+	    Serial.print("Sent response   ");
+			Serial.println(getOffsetCount++);
 	 }
  }
 
