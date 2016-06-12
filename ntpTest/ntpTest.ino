@@ -31,7 +31,6 @@ void setup() {
 
   // Init RTG
   FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
-
   for(int i=0; i<NUM_RGB_LEDS; i++)
       ledstrip[i] = CRGB(0,0,0);
   FastLED.show();
@@ -43,9 +42,42 @@ void setup() {
   // Initialize the Radio handler
   radioMan.init();
 
+  // initialize timer1 to toggle the LED strip (and BigLight?)
+  noInterrupts();           // disable all interrupts
+
+  // Select clock source: internal I/O clock
+  ASSR &= ~(1<<AS2);
+
+  // Configure timer2 in normal mode (pure counting, no PWM etc.)
+  TCCR2A = 0;
+  TCCR2B = 0;
+
+  // Set maximum divisor of 1/1024
+  TCCR2B |= (1 << CS20);
+  TCCR2B |= (1 << CS21);
+  TCCR2B |= (1 << CS22);
+
+  /* Disable Compare Match A interrupt enable (only want overflow) */
+  TIMSK2 = 0;
+  TIMSK2 |= (1<<TOIE2);
+
+  // Finally load the timer start counter; lowest is where to count
+  // start as interrupt happens at wrap around
+  TCNT2 = 0; // <-- maximum time possible between interrupts
+
+  interrupts();             // enable all interrupts
+
   // Log that setup is complete
   Serial.print("Setup complete, Address: ");
   Serial.println(getAddress());
+}
+
+// interrupt service routine for
+ISR(TIMER2_OVF_vect)
+{
+  // preload timer
+  TCNT2 = 0; // <-- maximum time possible between interrupts
+  WalkingLED();
 }
 
 
@@ -71,26 +103,20 @@ void WalkingLED() {
 }
 
 
-#define timeDelay 100
+#define timeDelay 500
 #define timeBetweenNTPLoops 30000
 void loop() {
 
-  WalkingLED();
+  // LED control is handled by interrupt on timer2
 
   if (getAddress() == 0) {
     radioMan.blockingListenForRadioRequest(timeDelay);
   } else {
     static bool inNTPLoop = true;
-unsigned long ntpStart = millis();
 
     bool setValue = radioMan.NTPLoop(&inNTPLoop, timeDelay, timeBetweenNTPLoops);
     if(inNTPLoop == false && setValue == false)
       delay(timeDelay);
-
-unsigned long ntpEnd = millis();
-Serial.print("ntpLoop time is  ");
-Serial.println(ntpEnd - ntpStart);
-
   }
 
 }
