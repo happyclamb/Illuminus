@@ -12,7 +12,7 @@
 #define RADIO_CHIP_ENABLE_PIN 7		// Digital
 #define RADIO_CHIP_SELECT_PIN 8		// Digital || CLOCK_0
 #define RGB_STRIP_PIN 9			// Digital || PWM
-#define BIG_LED_PIN 10 			// Digital || PWM
+#define BIG_LED_PIN 10 			// Digital || PWM		[note; should move to timer2 PWM as timer1 is 16bit and more useful for LED timing]
 #define RADIO_MOSI_PIN 11		// Digital || MOSI
 #define RADIO_MISO_PIN 12		// Digital || MISO
 #define RADIO_SCK_PIN 13		// Digital || SCK
