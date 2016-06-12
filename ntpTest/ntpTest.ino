@@ -74,17 +74,23 @@ void WalkingLED() {
 #define timeDelay 100
 #define timeBetweenNTPLoops 30000
 void loop() {
+
   WalkingLED();
 
   if (getAddress() == 0) {
     radioMan.blockingListenForRadioRequest(timeDelay);
   } else {
     static bool inNTPLoop = true;
+unsigned long ntpStart = millis();
 
-    radioMan.NTPLoop(&inNTPLoop, timeDelay, timeBetweenNTPLoops);
-    if(inNTPLoop == false) {
+    bool setValue = radioMan.NTPLoop(&inNTPLoop, timeDelay, timeBetweenNTPLoops);
+    if(inNTPLoop == false && setValue == false)
       delay(timeDelay);
-    }
+
+unsigned long ntpEnd = millis();
+Serial.print("ntpLoop time is  ");
+Serial.println(ntpEnd - ntpStart);
+
   }
 
 }

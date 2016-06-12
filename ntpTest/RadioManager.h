@@ -19,7 +19,7 @@ class RadioManager
     RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin);
     void init();
     unsigned long getAdjustedMillis();
-    void NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops);
+    bool NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops);
     void blockingListenForRadioRequest(unsigned long listenLength);
 
   private:

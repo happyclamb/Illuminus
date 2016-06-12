@@ -49,14 +49,19 @@ unsigned long RadioManager::getAdjustedMillis() {
 	return millis() + currentMillisOffset;
 }
 
-void RadioManager::NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops) {
+// returns true if the NTPLoop updates the value
+bool RadioManager::NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops) {
 	static unsigned long lastCheck = 0;
 	if(*inNTPLoop == true || millis() > lastCheck + timeBetweenNTPLoops)
 	{
 		*inNTPLoop = this->NTPLoopHelper(timeDelay);
 		if(*inNTPLoop == false)
+		{
 			lastCheck = millis();
+			return true;
+		}
 	}
+	return false;
 }
 
 #define OFFSET_SUCCESSES 3
