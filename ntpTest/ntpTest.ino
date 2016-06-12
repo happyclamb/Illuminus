@@ -18,10 +18,6 @@ CRGB ledstrip[NUM_RGB_LEDS];
 // Radio Manager
 RadioManager radioMan(RADIO_CHIP_ENABLE_PIN, RADIO_CHIP_SELECT_PIN);
 
-// Init Radio
-// RF24 radio(RADIO_CHIP_ENABLE_PIN, RADIO_CHIP_SELECT_PIN);
-// byte addresses[][6] = { "Chan1", "Chan2", "Chan3"};
-
 void setup() {
   Serial.begin(9600);
 
@@ -74,34 +70,21 @@ void WalkingLED() {
   FastLED.show();
 }
 
+
+#define timeDelay 100
+#define timeBetweenNTPLoops 30000
 void loop() {
   WalkingLED();
 
-  int timeDelay = 100;
   if (getAddress() == 0) {
     radioMan.blockingListenForRadioRequest(timeDelay);
   } else {
+    static bool inNTPLoop = true;
 
-    int timeBetweenChecks = 1000;
-    static unsigned long lastCheck = 0;
-
-    if(millis() > lastCheck + timeBetweenChecks)
-    {
-      lastCheck = millis();
-      unsigned long preSendTime = millis();
-
-      unsigned long maxSendTimeMicros = 20000;
-      long newOffset = radioMan.blockingGetOffsetFromServer(maxSendTimeMicros);
-      if(newOffset != 0)
-        radioMan.setMillisOffset(newOffset);
-
-      long remainingTime = (preSendTime + timeDelay) - millis();
-      if(remainingTime > 0)
-        delay(remainingTime);
-    }
-    else
-    {
+    radioMan.NTPLoop(&inNTPLoop, timeDelay, timeBetweenNTPLoops);
+    if(inNTPLoop == false) {
       delay(timeDelay);
     }
   }
+
 }

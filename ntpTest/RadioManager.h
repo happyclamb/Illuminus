@@ -18,16 +18,17 @@ class RadioManager
   public:
     RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin);
     void init();
-
     unsigned long getAdjustedMillis();
-    void setMillisOffset(long newOffset);
-    long blockingGetOffsetFromServer(unsigned long maxListenTimeout);
+    void NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops);
     void blockingListenForRadioRequest(unsigned long listenLength);
 
-    RF24 rf24;
   private:
+    RF24 rf24;
     long currentMillisOffset;
     byte radioAddresses[3][6];
+    void setMillisOffset(long newOffset);
+    bool NTPLoopHelper(int timeDelay);
+    long blockingGetOffsetFromServer(unsigned long maxListenTimeout);
 };
 
 #endif // __RADIOMANAGER_H__

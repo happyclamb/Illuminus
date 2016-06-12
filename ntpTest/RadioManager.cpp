@@ -17,7 +17,8 @@ void RadioManager::init() {
 	rf24.begin();
 
 	// RF24_PA_MAX is default.
-	rf24.setPALevel(RF24_PA_MAX);
+  //	rf24.setPALevel(RF24_PA_MAX);
+	rf24.setPALevel(RF24_PA_LOW);
 
 	// Set the data rate to the slowest (and most reliable) speed
 	rf24.setDataRate(RF24_1MBPS);
@@ -38,7 +39,6 @@ void RadioManager::init() {
 	rf24.startListening();
 }
 
-
 void RadioManager::setMillisOffset(long newOffset) {
 	Serial.print("RadioManager::setMillisOffset    newOffset: ");
 	Serial.println(newOffset);
@@ -49,14 +49,65 @@ unsigned long RadioManager::getAdjustedMillis() {
 	return millis() + currentMillisOffset;
 }
 
+void RadioManager::NTPLoop(bool *inNTPLoop, int timeDelay, int timeBetweenNTPLoops) {
+	static unsigned long lastCheck = 0;
+	if(*inNTPLoop == true || millis() > lastCheck + timeBetweenNTPLoops)
+	{
+		*inNTPLoop = this->NTPLoopHelper(timeDelay);
+		if(*inNTPLoop == false)
+			lastCheck = millis();
+	}
+}
+
+#define OFFSET_SUCCESSES 3
+bool RadioManager::NTPLoopHelper(int timeDelay) {
+
+  static long offsetCollection[OFFSET_SUCCESSES];
+  static int currOffsetIndex = 0;
+
+  bool inNTPLoop = true;
+  unsigned long preSendTime = millis();
+  unsigned long maxSendTimeMicros = timeDelay*750; // in ms; give some slack
+
+  long newOffset = this->blockingGetOffsetFromServer(maxSendTimeMicros);
+  if(newOffset != 0)
+  {
+/*
+    Serial.print("Success   ");
+    Serial.println(newOffset);
+*/
+    offsetCollection[currOffsetIndex] = newOffset;
+    currOffsetIndex++;
+
+    // Once there are OFFSET_SUCCESSES offsets, average and set it.
+    if(currOffsetIndex==OFFSET_SUCCESSES) {
+      long long summedOffset = 0;
+      for(int i=0; i<OFFSET_SUCCESSES;i++)
+        summedOffset += offsetCollection[i];
+
+      this->setMillisOffset(summedOffset/OFFSET_SUCCESSES);
+
+      currOffsetIndex = 0;
+      inNTPLoop = false;
+    }
+  }
+
+  long remainingTime = (preSendTime + timeDelay) - millis();
+  if(remainingTime > 0)
+    delay(remainingTime);
+
+  return(inNTPLoop);
+}
+
 long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 {
+/*
 	static int getOffsetCount=0;
-
-  // First, stop listening so we can talk.
   Serial.print("RadioManager::blockingGetOffsetFromServer    ");
 	Serial.println(getOffsetCount++);
+*/
 
+	// First, stop listening so we can talk.
   rf24.stopListening();
 
   // Take the time, and send it.  This will block until complete
@@ -96,7 +147,34 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 	rf24.read( &timeData, sizeof(TimeCounter) );
 	timeData.client_end = micros();
 
-  // Spew it
+  /* Finally have enough data to Do The Math
+   		https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
+		offSet = ((t1 - t0) + (t2-t3)) / 2
+		halfRtripDelay = ((t3-t0) - (t2-t1)) / 2
+				t0 == client_start
+				t1 == server_start
+				t2 == server_end
+				t3 == client_end
+	*/
+	//  long offSet = ((long)(timeData.server_start - timeData.client_start) + (long)(timeData.server_end - timeData.client_end)) / (long)2;
+	long t1_t0 = timeData.server_start - timeData.client_start;
+	long t2_t3 = timeData.server_end - timeData.client_end;
+	long long offset_LL = (t1_t0 + t2_t3);
+	long offset = (long) (offset_LL / 2);
+
+	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
+	long t3_t0 = timeData.client_end - timeData.client_start;
+	long t2_t1 = timeData.server_end - timeData.server_start;
+ 	long halfRtripDelay = (t3_t0 - t2_t1) / 2;
+
+	// Update offset to use the delay
+	offset = offset + halfRtripDelay;
+
+	// Need to convert from Micros to Millis
+	offset = ((offset+500)/1000);
+	return(offset);
+
+	// Spew Debug Info
 /*
 	Serial.print("VagueTxRxTime: ");
 	Serial.print(timeData.client_end - timeData.client_start);
@@ -108,29 +186,12 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 	Serial.print(timeData.server_start);
 	Serial.print("    server_end: ");
 	Serial.print(timeData.server_end);
-*/
-  // Finally have enough data to Do The Math
-  // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-  long offSet = ((long)(timeData.server_start - timeData.client_start) + (long)(timeData.server_end - timeData.client_end)) / (long)2;
-  long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
-
-/*
-	Serial.print("    offSet: ");
-  Serial.print(offSet);
+	Serial.print("    offset: ");
+  Serial.print(offset);
   Serial.print("    halfRtripDelay: ");
   Serial.print(halfRtripDelay);
 */
-	// Need to convert from Micros to Millis
-  offSet = ( offSet + halfRtripDelay ) / 1000;
-
 /*
-      long offSet = ((t1 - t0) + (t2-t3)) / 2;
-      long rtripDelay = (t3-t0) - (t2-t1)
-  t0 == client_start
-  t1 == server_start
-  t2 == server_end
-  t3 == client_end
-
 	// Math for Server running ahead
 	long offSet = ((t1 - t0) + (t2-t3)) / 2;
 	long rtripDelay = (t3-t0) - (t2-t1)
@@ -161,8 +222,6 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 			2110-2000 - 1010-1000
 			110 - 10 == 100
 */
-
-  return(offSet);
 }
 
 
@@ -174,7 +233,7 @@ void RadioManager::blockingListenForRadioRequest(unsigned long listenLength) {
 	{
 	  if (rf24.available()) {
 
-	    unsigned long receive_time = micros();                         // Variable for the received timestamp
+	    unsigned long receive_time = micros();                       // Variable for the received timestamp
 	    TimeCounter clientTime;
 	    while (rf24.available()) {                                   // While there is data ready
 	      rf24.read( &clientTime, sizeof(TimeCounter) );             // Get the payload
