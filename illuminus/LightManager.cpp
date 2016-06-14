@@ -7,7 +7,7 @@
 #include <FastLED.h>
 
 LightManager::LightManager(RadioManager& _radioMan)
-	:radioMan(_radioMan) {
+	:radioMan(_radioMan),pattern(0), pattern_param1(0){
 }
 
 void LightManager::init() {
@@ -34,10 +34,18 @@ void LightManager::updateLights() {
   if (litIndex > 5)
     litIndex -= (litIndex-5)*2;
 
+  CRGB paramColor;
+  if(pattern_param1%3 == 0)
+	paramColor = CRGB(30,0,0);
+  else if(pattern_param1%3 == 1)
+  	paramColor = CRGB(0,30,0);
+  else if(pattern_param1%3 == 2)
+	paramColor = CRGB(0,0,30);
+
   for(int i=0; i<NUM_RGB_LEDS; i++)
   {
     if(litIndex == i)
-      ledstrip[i] = CRGB(0,25,25);
+      ledstrip[i] = paramColor;
     else
       ledstrip[i] = CRGB(0,0,0);
   }

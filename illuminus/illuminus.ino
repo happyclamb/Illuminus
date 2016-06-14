@@ -71,25 +71,100 @@ void init_TIMER2_irq()
 ISR(TIMER2_OVF_vect)
 {
   lightMan->updateLights();
-
   // load timer last to maximize time until next call
   TCNT2 = 0; // <-- maximum time possible between interrupts
 }
 
-#define timeDelay 500
-#define timeBetweenNTPLoops 30000
 void loop() {
 
   // LED control is handled by interrupt on timer2
 
-  if (getAddress() == 0) {
-    radioMan->blockingListenForRadioRequest(timeDelay);
-  } else {
-    static bool inNTPLoop = true;
+  // Now handle server types
+  if (getAddress() == 0)
+    serverLoop();
+  else
+    sentryLoop();
+}
 
-    bool setValue = radioMan->NTPLoop(&inNTPLoop, timeDelay, timeBetweenNTPLoops);
-    if(inNTPLoop == false && setValue == false)
-      delay(timeDelay);
-  }
 
+#define timeBetweenNTPUpdates 15000
+#define timeBetweenLEDUpdates 1000
+#define NUMBER_SENTRIES 1
+void serverLoop() {
+
+   static unsigned long lastNTPCheck = 0;
+   static unsigned long lastLEDUpdateCheck = 0;
+
+   if(millis() > lastNTPCheck + timeBetweenNTPUpdates)
+   {
+      static int nextSentryToRunNTP = 1;
+
+      // Fire off a message to the next sentry to run an NTPloop
+      EventMessage messageOut;
+    	messageOut.message = NTP_MESSAGE;
+    	messageOut.byteParam1 = nextSentryToRunNTP++;
+    	messageOut.byteParam2 = 0;
+
+      radioMan->sendEventMessage(messageOut);
+
+      if(nextSentryToRunNTP > NUMBER_SENTRIES)
+         nextSentryToRunNTP = 1;
+
+      // Update lastNTPCheck
+      lastNTPCheck = millis();
+   } else if(millis() > lastLEDUpdateCheck + timeBetweenLEDUpdates) {
+      lightMan->pattern = 1;
+      lightMan->pattern_param1++;
+
+      EventMessage lightMessage;
+      lightMessage.message = COLOR_MESSAGE;
+      lightMessage.byteParam1 = lightMan->pattern;
+      lightMessage.byteParam2 = lightMan->pattern_param1;
+
+      // Fire off a message to the next sentry to run an NTPloop
+      radioMan->sendEventMessage(lightMessage);
+
+      // Update lastLEDUpdateCheck
+      lastLEDUpdateCheck = millis();
+   }
+   else
+   {
+     radioMan->checkForNTPRequest();
+   }
+
+   delay(10);
+}
+
+#define SENTRY_NTP_TIMEOUT 30000
+void sentryLoop() {
+   static bool inNTPLoop = false;
+
+   if(radioMan->isNewServerMessage()) {
+      EventMessage& serverMessage = radioMan->getEventMessage();
+      byte messageType = serverMessage.message;
+
+      // get the messageType
+      if(messageType == NTP_MESSAGE)
+      {
+        Serial.print("sentryLoop :: NTP_MESSAGE   ");
+        Serial.println(serverMessage.byteParam1);
+
+         // If sentry address matches the NTP message is its turn to update
+         if(serverMessage.byteParam1 == getAddress())
+            inNTPLoop = true;
+      }
+      else if(messageType == COLOR_MESSAGE)
+      {
+         lightMan->pattern = serverMessage.byteParam1;
+         lightMan->pattern_param1 = serverMessage.byteParam2;
+      }
+   }
+
+   // if this sentry is supposed to be updating its time
+   if(inNTPLoop)
+   {
+      radioMan->loopNTP(&inNTPLoop, SENTRY_NTP_TIMEOUT);
+   }
+
+   delay(100);
 }
