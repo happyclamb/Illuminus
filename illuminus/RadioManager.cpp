@@ -118,7 +118,8 @@ void RadioManager::loopNTP(bool *inNTPLoop, unsigned long timeoutMicros) {
 	}
 }
 
-#define OFFSET_SUCCESSES 3
+#define OFFSET_SUCCESSES 7
+#define MIDDLE_SUCCESSES 3
 bool RadioManager::loopNTPHelper(unsigned long timeoutMicros) {
 
   static long offsetCollection[OFFSET_SUCCESSES];
@@ -137,11 +138,25 @@ bool RadioManager::loopNTPHelper(unsigned long timeoutMicros) {
 
     // Once there are OFFSET_SUCCESSES offsets, average and set it.
     if(currOffsetIndex==OFFSET_SUCCESSES) {
+
+			for(int i=1;i<OFFSET_SUCCESSES;++i)
+			{
+					for(int j=0;j<(OFFSET_SUCCESSES-i);++j)
+							if(offsetCollection[j] > offsetCollection[j+1])
+							{
+									long temp = offsetCollection[j];
+									offsetCollection[j] = offsetCollection[j+1];
+									offsetCollection[j+1] = temp;
+							}
+			}
+
+			int excludeCount = (OFFSET_SUCCESSES - MIDDLE_SUCCESSES) / 2;
+
       long long summedOffset = 0;
-      for(int i=0; i<OFFSET_SUCCESSES;i++)
+      for(int i=excludeCount; i<excludeCount+MIDDLE_SUCCESSES;i++)
         summedOffset += offsetCollection[i];
 
-      this->setMillisOffset(summedOffset/OFFSET_SUCCESSES);
+      this->setMillisOffset(summedOffset/MIDDLE_SUCCESSES);
 
       currOffsetIndex = 0;
       inNTPLoop = false;
