@@ -106,11 +106,11 @@ bool RadioManager::NTPLoopHelper(int timeDelay) {
 
 long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 {
-/*
+
 	static int getOffsetCount=0;
   Serial.print("RadioManager::blockingGetOffsetFromServer    ");
 	Serial.println(getOffsetCount++);
-*/
+
 
 	// First, stop listening so we can talk.
   rf24.stopListening();
@@ -177,10 +177,9 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
 
 	// Need to convert from Micros to Millis
 	offset = ((offset+500)/1000);
-	return(offset);
 
 	// Spew Debug Info
-/*
+
 	Serial.print("VagueTxRxTime: ");
 	Serial.print(timeData.client_end - timeData.client_start);
 	Serial.print("    client_start: ");
@@ -195,7 +194,8 @@ long RadioManager::blockingGetOffsetFromServer(unsigned long maxListenTimeout)
   Serial.print(offset);
   Serial.print("    halfRtripDelay: ");
   Serial.print(halfRtripDelay);
-*/
+
+return(offset);
 /*
 	// Math for Server running ahead
 	long offSet = ((t1 - t0) + (t2-t3)) / 2;
