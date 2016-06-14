@@ -89,7 +89,7 @@ void loop() {
 
 #define timeBetweenNTPUpdates 15000
 #define timeBetweenLEDUpdates 1000
-#define NUMBER_SENTRIES 1
+#define NUMBER_SENTRIES 2
 void serverLoop() {
 
    static unsigned long lastNTPCheck = 0;

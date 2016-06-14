@@ -31,7 +31,7 @@ void RadioManager::init() {
 	rf24.setDataRate(RF24_1MBPS);
 
 	// Disable dynamicAck so we can send to multiple sentries
-//  rf24.setAutoAck(false);
+  rf24.setAutoAck(false);
 
 	/* EXAMPLE from:
 	http://tmrh20.github.io/RF24/classRF24.html#a6253607ac2a1995af91a35cea6899c31
