@@ -86,9 +86,9 @@ void loop() {
 }
 
 
-#define timeBetweenNTPUpdates 15000
+#define timeBetweenNTPUpdates 5000
 #define timeBetweenLEDUpdates 1000
-#define NUMBER_SENTRIES 2
+#define NUMBER_SENTRIES 4
 void serverLoop() {
 
 	static unsigned long lastNTPCheck = 0;
@@ -158,11 +158,16 @@ void sentryLoop() {
 	RF24Message *currMessage = radioMan->popMessage();
 	if(currMessage != NULL)
 	{
+		bool doEcho = true;
 		switch(currMessage->messageType)
 		{
 			case NTP_COORD_MESSAGE:
 				if(currMessage->byteParam1 == getAddress())
+				{
+					// Don't need to echo this message as it is now complete
 					inNTPLoop = true;
+					doEcho = false;
+				}
 				break;
 			case COLOR_MESSAGE:
 				lightMan->pattern = currMessage->byteParam1;
@@ -170,14 +175,18 @@ void sentryLoop() {
 				break;
 			case NTP_SERVER_RESPONSE:
 				if(currMessage->sentryRequestID == getAddress())
+				{
+					// Don't need to echo this message as it is now complete
 					inNTPLoop = radioMan->handleNTPServerResponse(currMessage);
+					doEcho = false;
+				}
 				break;
 		}
 
-		// check into:: http://tmrh20.github.io/RF24/
-		// ********************
-		// ECHO_MESSAGE HERE //
-		// ********************
+		if(doEcho)
+		{
+			radioMan->echoMessage(*currMessage);
+		}
 		delete currMessage;
 	}
 

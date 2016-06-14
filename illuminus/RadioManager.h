@@ -10,7 +10,7 @@ class RF24Message
 		byte messageType; // byte
 
 		byte sentryRequestID; // byte
-		long UID; // 4 bytes
+		unsigned long UID; // 4 bytes
 
 		byte byteParam1; // byte
 		byte byteParam2; // byte
@@ -29,18 +29,20 @@ struct MessageNode {
 	MessageNode *next;
 };
 
+#define MAX_STORED_MSG_IDS 150
 class RadioManager
 {
 	public:
 		RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin);
 		void init();
-		long generateUID();
+		unsigned long generateUID();
 		unsigned long getAdjustedMillis();
 
 		bool checkRadioForData();
 		RF24Message* popMessage();
 
 		void sendMessage(RF24Message messageToSend);
+		void echoMessage(RF24Message messageToEcho);
 		void sendNTPRequestToServer();
 		bool handleNTPServerResponse(RF24Message* ntpMessage);
 		void handleNTPClientRequest(RF24Message* ntpMessage);
@@ -50,7 +52,10 @@ class RadioManager
 		long currentMillisOffset;
 		byte radioAddresses[4][6];
 		MessageNode* messageQueue;
-//		long seenUIDs[100];
+		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
+		int nextSentUIDIndex;
+		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
+		int nextReceivedUIDIndex;
 
 		void setMillisOffset(long newOffset);
 		void pushMessage(RF24Message* newMessage);

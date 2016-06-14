@@ -10,8 +10,12 @@
 RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
 		currentMillisOffset(0),
+		radioAddresses{ 0xF0F0F0F0AA, 0xF0F0F0F0BB, 0xF0F0F0F0CC, 0xF0F0F0F0DD },
 		messageQueue(NULL),
-		radioAddresses{ 0xF0F0F0F0AA, 0xF0F0F0F0BB, 0xF0F0F0F0CC, 0xF0F0F0F0DD }
+		sentUIDs(),
+		nextSentUIDIndex(0),
+		receivedUIDs(),
+		nextReceivedUIDIndex(0)
 {
 }
 
@@ -45,12 +49,21 @@ void RadioManager::init() {
 	// kick off with listening
 	rf24.startListening();
 
+	// init the sentUIDs array
+	for(int i=0; i<MAX_STORED_MSG_IDS; i++)
+	{
+		sentUIDs[i] = 0;
+		receivedUIDs[i] = 0;
+	}
+
 	// Seed the random generator for message UID
 	randomSeed(analogRead(1));
 }
 
-long RadioManager::generateUID() {
-	return(random(-2147483648, 2147483647));
+unsigned long RadioManager::generateUID() {
+	unsigned long generatedUID = micros() << 3;
+	generatedUID |= getAddress();
+	return(generatedUID);
 }
 
 void RadioManager::setMillisOffset(long newOffset) {
@@ -98,6 +111,17 @@ RF24Message* RadioManager::popMessage() {
 }
 
 void RadioManager::pushMessage(RF24Message *newMessage) {
+
+	// If we've already sent or received this message let it die here
+	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
+		if(sentUIDs[i] == newMessage->UID) {
+			return;
+		}
+		if(receivedUIDs[i] == newMessage->UID) {
+			return;
+		}
+	}
+
 	if(messageQueue == NULL)
 	{
 		messageQueue = new MessageNode();
@@ -115,8 +139,12 @@ void RadioManager::pushMessage(RF24Message *newMessage) {
 			newNode->next = NULL;
 		}
 	}
-}
 
+	// Store this as received
+	receivedUIDs[nextReceivedUIDIndex++] = newMessage->UID;
+	if(nextReceivedUIDIndex == MAX_STORED_MSG_IDS)
+		nextReceivedUIDIndex = 0;
+}
 
 // Ponder sending out on multiple pipes ??
 void RadioManager::sendMessage(RF24Message messageToSend) {
@@ -129,7 +157,25 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.openWritingPipe(radioAddresses[1]);
 	rf24.openReadingPipe(1, radioAddresses[0]);
 
+	// Store this as sent
+	sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
+	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
+		nextSentUIDIndex = 0;
+
 	rf24.startListening();
+}
+
+void RadioManager::echoMessage(RF24Message messageToEcho) {
+
+	// Only care about checking for resending as
+	//	we *do* want to echo received messages
+	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
+		if(sentUIDs[i] == messageToEcho.UID) {
+			return;
+		}
+	}
+
+	sendMessage(messageToEcho);
 }
 
 void RadioManager::sendNTPRequestToServer()
