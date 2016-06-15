@@ -10,7 +10,7 @@
 RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
 		currentMillisOffset(0),
-		radioAddresses{ 0xF0F0F0F0AA, 0xF0F0F0F0BB, 0xF0F0F0F0CC, 0xF0F0F0F0DD },
+		radioAddresses{ 0xF0F0F0F0AA, 0xF0F0F0F0BB, 0xF0F0F0F0CC, 0xF0F0F0F0DD, 0xF0F0F0F0EE, 0xF0F0F0F0FF },
 		messageQueue(NULL),
 		sentUIDs(),
 		nextSentUIDIndex(0),
@@ -25,7 +25,8 @@ void RadioManager::init() {
 
 	// RF24_PA_MAX is default.
 	//	rf24.setPALevel(RF24_PA_MAX);
-	rf24.setPALevel(RF24_PA_LOW);
+	rf24.setPALevel(RF24_PA_HIGH);
+	//	rf24.setPALevel(RF24_PA_LOW);
 
 	// Set the data rate to the slowest (and most reliable) speed
 	rf24.setDataRate(RF24_1MBPS);
@@ -43,8 +44,10 @@ void RadioManager::init() {
 	rf24.setPayloadSize(sizeof(RF24Message));
 
 	// Everyone is listening on [0], will broadcast on [0] and switch back after
-	rf24.openWritingPipe(radioAddresses[1]);
+	rf24.openWritingPipe(radioAddresses[3]);
 	rf24.openReadingPipe(1, radioAddresses[0]);
+//	rf24.openReadingPipe(2, radioAddresses[1]);
+//	rf24.openReadingPipe(3, radioAddresses[2]);
 
 	// kick off with listening
 	rf24.startListening();
@@ -91,6 +94,9 @@ bool RadioManager::checkRadioForData() {
 		if(newMessage->messageType == NTP_CLIENT_REQUEST)
 			newMessage->server_start = micros();
 
+//Serial.print("pushMessage: ");
+//Serial.println(newMessage->UID);
+
 		pushMessage(newMessage);
 	}
 
@@ -111,7 +117,6 @@ RF24Message* RadioManager::popMessage() {
 }
 
 void RadioManager::pushMessage(RF24Message *newMessage) {
-
 	// If we've already sent or received this message let it die here
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(sentUIDs[i] == newMessage->UID) {
@@ -149,20 +154,33 @@ void RadioManager::pushMessage(RF24Message *newMessage) {
 // Ponder sending out on multiple pipes ??
 void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.stopListening();
-
 	rf24.closeReadingPipe(1);
 	rf24.openWritingPipe(radioAddresses[0]);
 	rf24.write(&messageToSend, sizeof(RF24Message));
-
-	rf24.openWritingPipe(radioAddresses[1]);
+	rf24.openWritingPipe(radioAddresses[3]);
 	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.startListening();
+/*
+	rf24.stopListening();
+	rf24.closeReadingPipe(2);
+	rf24.openWritingPipe(radioAddresses[1]);
+	rf24.write(&messageToSend, sizeof(RF24Message));
+	rf24.openWritingPipe(radioAddresses[3]);
+	rf24.openReadingPipe(2, radioAddresses[1]);
+	rf24.startListening();
 
+	rf24.stopListening();
+	rf24.closeReadingPipe(3);
+	rf24.openWritingPipe(radioAddresses[2]);
+	rf24.write(&messageToSend, sizeof(RF24Message));
+	rf24.openWritingPipe(radioAddresses[3]);
+	rf24.openReadingPipe(2, radioAddresses[2]);
+	rf24.startListening();
+*/
 	// Store this as sent
 	sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
 	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 		nextSentUIDIndex = 0;
-
-	rf24.startListening();
 }
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {

@@ -50,7 +50,7 @@ class RadioManager
 	private:
 		RF24 rf24;
 		long currentMillisOffset;
-		byte radioAddresses[4][6];
+		byte radioAddresses[6][6];
 		MessageNode* messageQueue;
 		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
 		int nextSentUIDIndex;
