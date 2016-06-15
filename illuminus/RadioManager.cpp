@@ -10,7 +10,7 @@
 RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
 		currentMillisOffset(0),
-		radioAddresses{ 0xF0F0F0F0AA, 0xF0F0F0F0BB, 0xF0F0F0F0CC, 0xF0F0F0F0DD, 0xF0F0F0F0EE, 0xF0F0F0F0FF },
+		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL },
 		messageQueue(NULL),
 		sentUIDs(),
 		nextSentUIDIndex(0),
