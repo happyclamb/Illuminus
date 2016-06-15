@@ -97,7 +97,8 @@ bool RadioManager::checkRadioForData() {
 //Serial.print("pushMessage: ");
 //Serial.println(newMessage->UID);
 
-		pushMessage(newMessage);
+		if(pushMessage(newMessage) == false)
+			delete newMessage;
 	}
 
 	return (messageQueue == NULL);
@@ -116,14 +117,14 @@ RF24Message* RadioManager::popMessage() {
 	return(returnMessage);
 }
 
-void RadioManager::pushMessage(RF24Message *newMessage) {
+bool RadioManager::pushMessage(RF24Message *newMessage) {
 	// If we've already sent or received this message let it die here
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(sentUIDs[i] == newMessage->UID) {
-			return;
+			return false;
 		}
 		if(receivedUIDs[i] == newMessage->UID) {
-			return;
+			return false;
 		}
 	}
 
@@ -149,10 +150,15 @@ void RadioManager::pushMessage(RF24Message *newMessage) {
 	receivedUIDs[nextReceivedUIDIndex++] = newMessage->UID;
 	if(nextReceivedUIDIndex == MAX_STORED_MSG_IDS)
 		nextReceivedUIDIndex = 0;
+
+	return true;
 }
 
 // Ponder sending out on multiple pipes ??
+#define MAX_RETRIES 2
 void RadioManager::sendMessage(RF24Message messageToSend) {
+
+	static int retries = 0;
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
 	rf24.openWritingPipe(radioAddresses[0]);
@@ -177,10 +183,24 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.openReadingPipe(2, radioAddresses[2]);
 	rf24.startListening();
 */
+
 	// Store this as sent
 	sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
 	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 		nextSentUIDIndex = 0;
+
+	if(retries < MAX_RETRIES)
+	{
+		delay(1);
+		rf24.stopListening();
+		rf24.closeReadingPipe(1);
+		rf24.openWritingPipe(radioAddresses[0]);
+		rf24.write(&messageToSend, sizeof(RF24Message));
+		rf24.openWritingPipe(radioAddresses[3]);
+		rf24.openReadingPipe(1, radioAddresses[0]);
+		rf24.startListening();
+	}
+
 }
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {

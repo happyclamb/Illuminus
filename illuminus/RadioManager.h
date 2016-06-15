@@ -58,7 +58,7 @@ class RadioManager
 		int nextReceivedUIDIndex;
 
 		void setMillisOffset(long newOffset);
-		void pushMessage(RF24Message* newMessage);
+		bool pushMessage(RF24Message* newMessage);
 		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 };
 
