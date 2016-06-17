@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "RF24.h"
 
+#include "IlluminusDefs.h"
+
 class RF24Message
 {
 	public:
@@ -29,7 +31,6 @@ struct MessageNode {
 	MessageNode *next;
 };
 
-#define MAX_STORED_MSG_IDS 150
 class RadioManager
 {
 	public:

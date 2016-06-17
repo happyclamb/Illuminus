@@ -1,6 +1,15 @@
 #ifndef __PINDEFNS_H__
 #define __PINDEFNS_H__
 
+#define NUMBER_SENTRIES 5
+#define NUM_RGB_LEDS 6
+#define TIME_BETWEEN_NTP_UPDATES 5000
+#define TIME_BETWEEN_LED_UPDATES 1000
+#define FORCE_PATTERN_CHANGE 20000
+#define MAX_STORED_MSG_IDS 150
+#define NTP_OFFSET_SUCCESSES_REQUIRED 7
+#define NTP_OFFSET_SUCCESSES_USED 3
+
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging
 // #define serialTX 1		// Used for serial debugging

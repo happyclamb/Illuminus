@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include "RF24.h"
 
+#include "IlluminusDefs.h"
 #include "Utils.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
@@ -154,11 +155,25 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 	return true;
 }
 
-// Ponder sending out on multiple pipes ??
-#define MAX_RETRIES 2
+// Ponder sending multiple times ??
 void RadioManager::sendMessage(RF24Message messageToSend) {
 
-	static int retries = 0;
+	// Mark as sent
+	bool alreadySent = false;
+	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
+		if(sentUIDs[i] == messageToSend.UID) {
+			alreadySent = true;
+			break;
+		}
+	}
+
+	// Store this as sent
+	if(alreadySent == false) {
+		sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
+		if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
+			nextSentUIDIndex = 0;
+	}
+
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
 	rf24.openWritingPipe(radioAddresses[0]);
@@ -166,7 +181,10 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.openWritingPipe(radioAddresses[3]);
 	rf24.openReadingPipe(1, radioAddresses[0]);
 	rf24.startListening();
+
 /*
+	// Sending on multiple pipes doesn't seem to work as well as
+	//	simply resending on same pipe
 	rf24.stopListening();
 	rf24.closeReadingPipe(2);
 	rf24.openWritingPipe(radioAddresses[1]);
@@ -174,33 +192,17 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.openWritingPipe(radioAddresses[3]);
 	rf24.openReadingPipe(2, radioAddresses[1]);
 	rf24.startListening();
-
-	rf24.stopListening();
-	rf24.closeReadingPipe(3);
-	rf24.openWritingPipe(radioAddresses[2]);
-	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(2, radioAddresses[2]);
-	rf24.startListening();
 */
 
-	// Store this as sent
-	sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
-	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
-		nextSentUIDIndex = 0;
-
-	if(retries < MAX_RETRIES)
-	{
-		delay(1);
-		rf24.stopListening();
-		rf24.closeReadingPipe(1);
-		rf24.openWritingPipe(radioAddresses[0]);
-		rf24.write(&messageToSend, sizeof(RF24Message));
-		rf24.openWritingPipe(radioAddresses[3]);
-		rf24.openReadingPipe(1, radioAddresses[0]);
-		rf24.startListening();
-	}
-
+	// Doing one realy quick and dirty resend here after a short delay
+	delay(1);
+	rf24.stopListening();
+	rf24.closeReadingPipe(1);
+	rf24.openWritingPipe(radioAddresses[0]);
+	rf24.write(&messageToSend, sizeof(RF24Message));
+	rf24.openWritingPipe(radioAddresses[3]);
+	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.startListening();
 }
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {
@@ -230,10 +232,8 @@ void RadioManager::sendNTPRequestToServer()
 	sendMessage(ntpOut);
 }
 
-#define OFFSET_SUCCESSES 7
-#define MIDDLE_SUCCESSES 3
 bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
-	static long offsetCollection[OFFSET_SUCCESSES];
+	static long offsetCollection[NTP_OFFSET_SUCCESSES_REQUIRED];
 	static int currOffsetIndex = 0;
 
 	bool inNTPLoop = true;
@@ -245,11 +245,11 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 		currOffsetIndex++;
 
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
-		if(currOffsetIndex==OFFSET_SUCCESSES) {
+		if(currOffsetIndex==NTP_OFFSET_SUCCESSES_REQUIRED) {
 
-			for(int i=1;i<OFFSET_SUCCESSES;++i)
+			for(int i=1;i<NTP_OFFSET_SUCCESSES_REQUIRED;++i)
 			{
-					for(int j=0;j<(OFFSET_SUCCESSES-i);++j)
+					for(int j=0;j<(NTP_OFFSET_SUCCESSES_REQUIRED-i);++j)
 							if(offsetCollection[j] > offsetCollection[j+1])
 							{
 									long temp = offsetCollection[j];
@@ -258,13 +258,13 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 							}
 			}
 
-			int excludeCount = (OFFSET_SUCCESSES - MIDDLE_SUCCESSES) / 2;
+			int excludeCount = (NTP_OFFSET_SUCCESSES_REQUIRED - NTP_OFFSET_SUCCESSES_USED) / 2;
 
 			long long summedOffset = 0;
-			for(int i=excludeCount; i<excludeCount+MIDDLE_SUCCESSES;i++)
+			for(int i=excludeCount; i<excludeCount+NTP_OFFSET_SUCCESSES_USED; i++)
 				summedOffset += offsetCollection[i];
 
-			this->setMillisOffset(summedOffset/MIDDLE_SUCCESSES);
+			this->setMillisOffset(summedOffset/NTP_OFFSET_SUCCESSES_USED);
 
 			currOffsetIndex = 0;
 			inNTPLoop = false;

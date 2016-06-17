@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "PinDefns.h"
+#include "IlluminusDefs.h"
 #include "Utils.h"
 
 #include "RadioManager.h"
@@ -70,7 +70,7 @@ void init_TIMER2_irq()
 // interrupt service routine for
 ISR(TIMER2_OVF_vect)
 {
-	lightMan->updateLights();
+	lightMan->redrawLights();
 	// load timer last to maximize time until next call
 	TCNT2 = 0; // <-- maximum time possible between interrupts
 }
@@ -85,10 +85,6 @@ void loop() {
 		sentryLoop();
 }
 
-
-#define timeBetweenNTPUpdates 5000
-#define timeBetweenLEDUpdates 1000
-#define NUMBER_SENTRIES 4
 void serverLoop() {
 
 	static unsigned long lastNTPCheck = 0;
@@ -106,7 +102,7 @@ void serverLoop() {
 		delete currMessage;
 	}
 
-	if(millis() > lastNTPCheck + timeBetweenNTPUpdates)
+	if(millis() > lastNTPCheck + TIME_BETWEEN_NTP_UPDATES)
 	{
 		static int nextSentryToRunNTP = 1;
 
@@ -125,17 +121,16 @@ void serverLoop() {
 
 		// Update lastNTPCheck
 		lastNTPCheck = millis();
-	} else if(millis() > lastLEDUpdateCheck + timeBetweenLEDUpdates) {
+	} else if(millis() > lastLEDUpdateCheck + TIME_BETWEEN_LED_UPDATES) {
 
-		// generate newPatterns for LEDs
-		lightMan->pattern = 1;
-		lightMan->pattern_param1++;
+		// generate newPatterns for LEDs since the interrupt will do the painting
+		lightMan->chooseNewPattern();
 
 		// send color updates
 		RF24Message lightMessage;
 		lightMessage.messageType = COLOR_MESSAGE;
-		lightMessage.byteParam1 = lightMan->pattern;
-		lightMessage.byteParam2 = lightMan->pattern_param1;
+		lightMessage.byteParam1 = lightMan->getPattern();
+		lightMessage.byteParam2 = lightMan->getPatternParam();
 		lightMessage.sentryRequestID = 0;
 		lightMessage.UID = radioMan->generateUID();
 
@@ -170,8 +165,9 @@ void sentryLoop() {
 				}
 				break;
 			case COLOR_MESSAGE:
-				lightMan->pattern = currMessage->byteParam1;
-				lightMan->pattern_param1 = currMessage->byteParam2;
+				// update pattern for LEDs since the interrupt will do the painting
+				lightMan->setPattern(currMessage->byteParam1);
+				lightMan->setPatternParam(currMessage->byteParam2);
 				break;
 			case NTP_SERVER_RESPONSE:
 				if(currMessage->sentryRequestID == getAddress())

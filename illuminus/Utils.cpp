@@ -1,8 +1,6 @@
 #include "Utils.h"
 
-#include "PinDefns.h"
-
-
+#include "IlluminusDefs.h"
 
 // because of a wiring defect in board #3 that has addr4 always low; just reading the first 3 bits.
 // 000 = server

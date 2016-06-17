@@ -2,6 +2,7 @@
 #define __UTILS_H__
 
 #include <Arduino.h>
+#include "IlluminusDefs.h"
 
 int getAddress(bool forceReread = false);
 
