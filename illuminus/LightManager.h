@@ -14,6 +14,12 @@ class LightPattern {
 		byte pattern_param2;
 };
 
+enum LightPatternTimingOptions {
+			PATTERN_TIMING_NONE,
+			PATTERN_TIMING_STAGGER,
+			PATTERN_TIMING_SYNC };
+
+
 class LightManager {
 	public:
 		LightManager(RadioManager& _radioMan);
@@ -40,8 +46,7 @@ class LightManager {
 		void checkForPatternUpdate();
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
-		void syncFade();
-		void staggeredFade();
+		void solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs);
 };
 
 #endif // __LIGHTMANAGER_H__

@@ -59,7 +59,6 @@ void LightManager::setNextPattern(LightPattern newPattern, unsigned long startTi
 	this->nextPatternStartTime = startTime;
 }
 
-#define PATTERNS_DEFINED 3
 void LightManager::chooseNewPattern() {
 	static unsigned long lastPatternChangeTime = 0;
 
@@ -70,7 +69,7 @@ void LightManager::chooseNewPattern() {
 		int newPatternCode = this->currPattern.pattern;
 		newPatternCode++;
 
-		if(newPatternCode == PATTERNS_DEFINED)
+		if(newPatternCode == LIGHT_PATTERNS_DEFINED)
 			newPatternCode = 0;
 
 		this->nextPattern.pattern = newPatternCode;
@@ -149,15 +148,13 @@ void LightManager::checkForPatternUpdate() {
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
 	switch(this->currPattern.pattern) {
-		case 0:
-			debugPattern();
-			break;
-		case 1:
-			syncFade();
-			break;
-		case 2:
-			staggeredFade();
-			break;
+		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
+		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
+		case 2: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
+		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
+		case 5: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 6: debugPattern(); break;
 	}
 }
 
@@ -187,40 +184,37 @@ void LightManager::debugPattern() {
 	}
 }
 
-// cycle through all 255 wheel positions over ~3sec
+// Treat all 6 LEDs as 1 solid colour, default pattern look is to have all
+//  the lanterns showing exactly the same pattern PATTERN_TIMING_SYNC
+//	if (allLaternLEDs) then make all 6 LEDs the same
+// MATH: cycle through all 255 wheel positions over ~3sec
 // == 3000/255 == 11.7 ... make a step 12ms == 12*255 == 3060
-#define timeBetweenWheelStep 24
-void LightManager::syncFade() {
-	//	can't store the position as it is time dependant
-	//	otherwise syncronization fails so Math the current position
+void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs) {
+	unsigned long currTime = 0;
+	if(timingType == PATTERN_TIMING_NONE)
+		currTime = millis();
+	else
+		currTime = radioMan.getAdjustedMillis();
 
 	// Over 255position*12ms broken into segements
-	unsigned long currTime = radioMan.getAdjustedMillis();
-	byte wheelPos = (currTime%(255*timeBetweenWheelStep))/timeBetweenWheelStep;
-
-	CRGB wheelColor = colorFromWheelPosition(wheelPos);
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
-		ledstrip[i] = wheelColor;
-	}
-}
-
-void LightManager::staggeredFade() {
-	//	can't store the position as it is time dependant
-	//	otherwise syncronization fails so Math the current position
-
-	// Over 255position*12ms broken into segements
-	unsigned long currTime = radioMan.getAdjustedMillis();
-	byte wheelPos = (currTime%(255*timeBetweenWheelStep))/timeBetweenWheelStep;
+	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*COLOR_TIME_BETWEEN_WHEEL_STEPS))/COLOR_TIME_BETWEEN_WHEEL_STEPS;
 
 	// Now handle the stagger between sentries.
-	byte wheelSentryPositionOffsetAmount = 255 / NUMBER_SENTRIES;
-	byte thisSentryOffset = getAddress() * wheelSentryPositionOffsetAmount;
-
-	CRGB wheelColor = colorFromWheelPosition(wheelPos+thisSentryOffset);
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
-		ledstrip[i] = wheelColor;
+	byte thisSentryOffset = 0;
+	if(timingType == PATTERN_TIMING_STAGGER) {
+		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / NUMBER_SENTRIES;
+		thisSentryOffset = getAddress() * wheelSentryPositionOffsetAmount;
 	}
 
+	//	CRGB wheelColor = colorFromWheelPosition(wheelPos+thisSentryOffset);
+	byte baseWheel = wheelPos+thisSentryOffset;
+	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / NUM_RGB_LEDS;
+	for(int i=0; i<NUM_RGB_LEDS; i++) {
+		byte nextStep = baseWheel;
+		if(allLaternLEDs == false)
+			nextStep += (offsetForLanternLeds/2) + (i*offsetForLanternLeds);
+		ledstrip[i] = colorFromWheelPosition(nextStep);
+	}
 }
 
 
