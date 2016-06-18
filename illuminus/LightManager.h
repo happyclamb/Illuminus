@@ -7,28 +7,37 @@
 #include "IlluminusDefs.h"
 #include "RadioManager.h"
 
-class LightManager
-{
+class LightPattern {
+	public:
+		byte pattern;
+		byte pattern_param1;
+		byte pattern_param2;
+};
+
+class LightManager {
 	public:
 		LightManager(RadioManager& _radioMan);
 		void init();
-		byte getPattern();
-		void setPattern(byte newPattern);
-		byte getPatternParam();
-		void setPatternParam(byte newPatternParam1);
+		LightPattern getNextPattern();
+		unsigned long getNextPatternStartTime();
+		void setNextPattern(LightPattern newPattern, unsigned long startTime);
 		void chooseNewPattern(); // called from server
-
 		void redrawLights();
 
 	private:
 		CRGB ledstrip[NUM_RGB_LEDS];
 		RadioManager& radioMan;
-		byte pattern;
-		byte pattern_param1;
+		LightPattern currPattern;
+		LightPattern nextPattern;
+		unsigned long nextPatternStartTime;
+
+		LightPattern getPattern();
+		void setPattern(LightPattern newPattern);
 
 		CRGB colorFromWheelPosition(byte wheelPos);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b);
 
+		void checkForPatternUpdate();
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
 		void syncFade();

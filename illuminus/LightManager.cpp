@@ -7,9 +7,17 @@
 #include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
 
 LightManager::LightManager(RadioManager& _radioMan):
-	radioMan(_radioMan),
-	pattern(1),
-	pattern_param1(0){
+	radioMan(_radioMan) {
+
+	currPattern.pattern = 0;
+	currPattern.pattern_param1 = 0;
+	currPattern.pattern_param2 = 0;
+
+	nextPattern.pattern = 0;
+	nextPattern.pattern_param1 = 0;
+	nextPattern.pattern_param2 = 0;
+
+	nextPatternStartTime = 0;
 }
 
 void LightManager::init() {
@@ -25,20 +33,31 @@ void LightManager::init() {
 	analogWrite(BIG_LED_PIN, bigLEDBrightness);
 }
 
-byte LightManager::getPattern() {
-	return(pattern);
-}
-void LightManager::setPattern(byte newPattern) {
-	pattern = newPattern;
+LightPattern LightManager::getPattern() {
+	return this->currPattern;
 }
 
-byte LightManager::getPatternParam() {
-	return(pattern_param1);
-}
-void LightManager::setPatternParam(byte newPatternParam1) {
-	pattern_param1 = newPatternParam1;
+void LightManager::setPattern(LightPattern newPattern) {
+	this->currPattern.pattern = newPattern.pattern;
+	this->currPattern.pattern_param1 = newPattern.pattern_param1;
+	this->currPattern.pattern_param2 = newPattern.pattern_param2;
 }
 
+LightPattern LightManager::getNextPattern() {
+	return(this->nextPattern);
+}
+
+unsigned long LightManager::getNextPatternStartTime() {
+	return(this->nextPatternStartTime);
+}
+
+void LightManager::setNextPattern(LightPattern newPattern, unsigned long startTime) {
+	this->nextPattern.pattern = newPattern.pattern;
+	this->nextPattern.pattern_param1 = newPattern.pattern_param1;
+	this->nextPattern.pattern_param2 = newPattern.pattern_param2;
+
+	this->nextPatternStartTime = startTime;
+}
 
 #define PATTERNS_DEFINED 3
 void LightManager::chooseNewPattern() {
@@ -48,12 +67,31 @@ void LightManager::chooseNewPattern() {
 	if(currTime > lastPatternChangeTime + FORCE_PATTERN_CHANGE)
 	{
 		// increment internal pattern
-		pattern++;
+		int newPatternCode = this->currPattern.pattern;
+		newPatternCode++;
 
-		if(pattern == PATTERNS_DEFINED)
-			pattern = 0;
+		if(newPatternCode == PATTERNS_DEFINED)
+			newPatternCode = 0;
+
+		this->nextPattern.pattern = newPatternCode;
+		this->nextPattern.pattern_param1 = this->currPattern.pattern_param1;
+		this->nextPattern.pattern_param2 = this->currPattern.pattern_param2;
+		nextPatternStartTime = radioMan.getAdjustedMillis() + PATTERN_CHANGE_DELAY;
 
 		lastPatternChangeTime = currTime;
+	}
+	else
+	{
+		// check to see if the pattern_param should be updated...
+		#define TimeBetweenDebugPatternColorChange 1000
+		unsigned long currTime = radioMan.getAdjustedMillis();
+
+		static unsigned long colorChoice = 0;
+		if(currTime > colorChoice + TimeBetweenDebugPatternColorChange) {
+			this->nextPattern.pattern_param1++;
+			nextPatternStartTime = radioMan.getAdjustedMillis() + PATTERN_CHANGE_DELAY;
+		}
+
 	}
 }
 
@@ -94,12 +132,23 @@ void LightManager::colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte 
 //*********  Everything from here forward runs on interrupt !! *******
 //*********
 void LightManager::redrawLights() {
+	checkForPatternUpdate();
 	updateLEDArrayFromCurrentPattern();
 	FastLED.show();
 }
+
+void LightManager::checkForPatternUpdate() {
+	unsigned long currTime = radioMan.getAdjustedMillis();
+	if(currTime > nextPatternStartTime) {
+		this->currPattern.pattern = this->nextPattern.pattern;
+		this->currPattern.pattern_param1 = this->nextPattern.pattern_param1;
+		this->currPattern.pattern_param2 = this->nextPattern.pattern_param2;
+	}
+}
+
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
-	switch(pattern) {
+	switch(this->currPattern.pattern) {
 		case 0:
 			debugPattern();
 			break;
@@ -112,15 +161,8 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 	}
 }
 
-#define TimeBetweenDebugPatternColorChange 1000
 void LightManager::debugPattern() {
 	unsigned long currTime = radioMan.getAdjustedMillis();
-
-	static unsigned long colorChoice = 0;
-	if(currTime > colorChoice + TimeBetweenDebugPatternColorChange) {
-		setPatternParam(pattern_param1++);
-		colorChoice = currTime;
-	}
 
 	// Over 2000ms break into 200ms sections (10 total) segments
 	int litIndex = (currTime%(2000))/200;
@@ -131,12 +173,11 @@ void LightManager::debugPattern() {
 		litIndex -= (litIndex-5)*2;
 
 	CRGB paramColor;
-	if(pattern_param1%3 == 0)
-		paramColor = CRGB(30,0,0);
-	else if(pattern_param1%3 == 1)
-		paramColor = CRGB(0,30,0);
-	else if(pattern_param1%3 == 2)
-		paramColor = CRGB(0,0,30);
+	switch(this->currPattern.pattern_param1%3) {
+		case 0: paramColor = CRGB(75,0,0); break;
+		case 1: paramColor = CRGB(0,75,0); break;
+		case 2: paramColor = CRGB(0,0,75); break;
+	}
 
 	for(int i=0; i<NUM_RGB_LEDS; i++) {
 		if(litIndex == i)

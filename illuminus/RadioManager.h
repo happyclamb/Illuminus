@@ -23,8 +23,12 @@ class RF24Message
 		unsigned long server_end; // 4 bytes
 };
 
-enum Radio_Message_Type { NTP_COORD_MESSAGE, NTP_CLIENT_REQUEST, NTP_SERVER_RESPONSE, COLOR_MESSAGE };
-
+enum Radio_Message_Type {
+			NTP_COORD_MESSAGE,
+			NTP_CLIENT_REQUEST,
+			NTP_SERVER_RESPONSE,
+			NTP_CLIENT_FINISHED,
+			COLOR_MESSAGE };
 
 struct MessageNode {
 	RF24Message *message;
@@ -39,6 +43,7 @@ class RadioManager
 		unsigned long generateUID();
 		unsigned long getAdjustedMillis();
 
+		bool setInformServerWhenNTPDone(bool newValue);
 		bool checkRadioForData();
 		RF24Message* popMessage();
 
@@ -57,6 +62,7 @@ class RadioManager
 		int nextSentUIDIndex;
 		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
 		int nextReceivedUIDIndex;
+		bool informServerWhenNTPDone;
 
 		void setMillisOffset(long newOffset);
 		bool pushMessage(RF24Message* newMessage);

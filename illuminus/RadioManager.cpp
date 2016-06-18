@@ -16,7 +16,8 @@ RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		sentUIDs(),
 		nextSentUIDIndex(0),
 		receivedUIDs(),
-		nextReceivedUIDIndex(0)
+		nextReceivedUIDIndex(0),
+		informServerWhenNTPDone(false)
 {
 }
 
@@ -80,6 +81,10 @@ unsigned long RadioManager::getAdjustedMillis() {
 	return millis() + currentMillisOffset;
 }
 
+
+bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
+	informServerWhenNTPDone = newValue;
+}
 
 // continually polls for available data, and when found pushes
 //	to the queue and then breaks to notify.
@@ -264,8 +269,21 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 			for(int i=excludeCount; i<excludeCount+NTP_OFFSET_SUCCESSES_USED; i++)
 				summedOffset += offsetCollection[i];
 
-			this->setMillisOffset(summedOffset/NTP_OFFSET_SUCCESSES_USED);
+			long averagedOffset = summedOffset/NTP_OFFSET_SUCCESSES_USED;
+			this->setMillisOffset(averagedOffset);
 
+			if(informServerWhenNTPDone) {
+				// Tell the server that syncronization has happened.
+				RF24Message ntpClientFinished;
+				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
+				ntpClientFinished.client_start = averagedOffset;
+				ntpClientFinished.sentryRequestID = getAddress();
+				ntpClientFinished.UID = generateUID();
+				sendMessage(ntpClientFinished);
+			}
+
+			// reset variables to wait for next NTP sync
+			informServerWhenNTPDone = false;
 			currOffsetIndex = 0;
 			inNTPLoop = false;
 		}
