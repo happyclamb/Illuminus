@@ -1,10 +1,12 @@
 #include "LightManager.h"
 
+#include <Arduino.h>
+#include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
+
 #include "Utils.h"
 #include "IlluminusDefs.h"
 
 #include "RadioManager.h"
-#include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
 
 LightManager::LightManager(RadioManager& _radioMan):
 	radioMan(_radioMan) {
@@ -65,14 +67,7 @@ void LightManager::chooseNewPattern() {
 	unsigned long currTime = radioMan.getAdjustedMillis();
 	if(currTime > lastPatternChangeTime + FORCE_PATTERN_CHANGE)
 	{
-		// increment internal pattern
-		int newPatternCode = this->currPattern.pattern;
-		newPatternCode++;
-
-		if(newPatternCode == LIGHT_PATTERNS_DEFINED)
-			newPatternCode = 0;
-
-		this->nextPattern.pattern = newPatternCode;
+		this->nextPattern.pattern = random(0,LIGHT_PATTERNS_DEFINED);
 		this->nextPattern.pattern_param1 = this->currPattern.pattern_param1;
 		this->nextPattern.pattern_param2 = this->currPattern.pattern_param2;
 		nextPatternStartTime = radioMan.getAdjustedMillis() + PATTERN_CHANGE_DELAY;
@@ -151,10 +146,11 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
 		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
 		case 2: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
-		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
-		case 5: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
-		case 6: debugPattern(); break;
+		case 3: comet(); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
+		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
+		case 6: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 7: debugPattern(); break;
 	}
 }
 
@@ -217,232 +213,35 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	}
 }
 
-
-/*
-// Makes a random pixel white at random interals
-void sparkle()
+#define COMET_SPEED 500
+void LightManager::comet()
 {
-  // figure this out later strip.numPixels()]
-  static byte pixelSparkleLevel[40];
+// Ball of light followed by a streak:
+// Turn everyting off for 1/2 second
+//First one brightest, behind it dimming
+// Insta on / fade softly
 
-  int seededStars = 8;
-  // turn on newStars at max brightness
-  for(int i=0; i < seededStars; i++)
-    pixelSparkleLevel[random(strip.numPixels())]=255;
+// Want to dim each light from 255->0   over (~255ms*2)
+// Light moves at about 255ms / light. == MOVE_SPEED
+// 8 lights * 255 + 1 segent of all black + 1 segment final fade ==  (NUMBER_SENTRIES + 2) * MOVE_SPEED
 
-  while(true)
-  {
-    // This range may seem random, but my favourite setting is at 10
-    // and I wanted 10 to be exatly in the middle.
-    // clamb: need more dials to allow control of this; commented out for now
-    // and hardcoded to 10.
-    //   global_miscB (value 0->10) default = 5
-    //   int likelyhood = (global_miscB+1)*2;
-    //   if(random(map(likelyhood,0,1023,1,18))==0)
-    if(random(60)==0)
-    {
-       pixelSparkleLevel[random(strip.numPixels())]=255;
-    }
+	byte numberOfSteps = NUMBER_SENTRIES + 2;
+	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
 
-    // global_miscA (value 0->10) default = 5
-    // int fadeSpeed = (global_miscA+1)*2;
-    int fadeSpeed = 1;
+	unsigned long currTime = radioMan.getAdjustedMillis();
+	int currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;
 
-    for(int i=0; i<strip.numPixels(); i++)
-    {
-      // take base colour in 'pixelSparkleLevel' array and create a bluish tinge
-      byte red = pixelSparkleLevel[i];
-      byte green = map(pixelSparkleLevel[i], 0, 255, 0, 175);
-      byte blue = map(pixelSparkleLevel[i], 0, 255, 0, 140);
-      uint32_t newColor = Color(pixelSparkleLevel[i], green, blue);
-      strip.setPixelColor(i, newColor);
+	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * COMET_SPEED);
+	int numberOfColorDecreaseSteps = 128;
+	int brightnessLevel = ((COMET_SPEED-timeIntoASegment)*numberOfColorDecreaseSteps)/COMET_SPEED;
 
-      // Slowly fade the sparkle down and ensure it never drops
-      // less than zero.
-      if(pixelSparkleLevel[i] > fadeSpeed)
-      {
-        pixelSparkleLevel[i] -= fadeSpeed;
-      }
-      else
-      {
-        pixelSparkleLevel[i] = 0;
-      }
-    }
-    strip.show();
+	if(currentPatternSegment == (getAddress()+1))
+		brightnessLevel = brightnessLevel + 127;
+	else if(currentPatternSegment == (getAddress()+2))
+		brightnessLevel = brightnessLevel;
+	else
+		brightnessLevel = 0;
 
-    // global_miscA (value 0->10) default = 5
-    uint8_t wait = global_variables[speed].currNumber*10;
-    if(global_patternChanged)
-      return;
-    else
-      delay(wait);
-  }
+	for(int i=0; i<NUM_RGB_LEDS; i++)
+		ledstrip[i] = CRGB(brightnessLevel,brightnessLevel,brightnessLevel);
 }
-
-
-void circleComet()
-{
-  byte red = 255;
-  byte green = 255;
-  byte blue = 255;
-
-  int currentIndex = 0;
-  int numLights = 4;
-  int offset = strip.numPixels() / numLights;
-  while(true)
-  {
-    // walk the length setting each pixel to give clearing effect
-    for (int i=0; i < strip.numPixels(); i++)
-    {
-      boolean found = false;
-
-      if(i%offset == currentIndex)
-      {
-        strip.setPixelColor(i, Color(red, green, blue));
-        found = true;
-      }
-
-      if(!found)
-        strip.setPixelColor(i, Color(0, 0, 0));
-    }
-    strip.show();
-
-    // move the ball
-    if(currentIndex == offset-1)
-      currentIndex = 0;
-    else
-      currentIndex++;
-
-    uint8_t wait = global_variables[speed].currNumber*20;
-    if(global_patternChanged)
-      return;
-    else
-      delay(wait);
-  }
-}
-
-
-void rainbowComet()
-{
-  byte red = 255;
-  byte green = 255;
-  byte blue = 255;
-
-  int forward = 1;
-  int ballLength = 10;
-  int currentIndex = ballLength * -1;
-  boolean doIncrement = false;
-
-  int fadeSpeed = 3; //global_miscA;
-
-  int targetWheel = random(511);
-  int inverseWheel = (targetWheel + 255) % 511;
-  int currTargetWheel = targetWheel;
-  int currAntiTargetWheel = inverseWheel;
-  int currInverseWheel = inverseWheel;
-
-  while(true)
-  {
-    // walk the length setting each pixel to give clearing effect
-    for (int i=0; i < strip.numPixels(); i++)
-    {
-      boolean found = false;
-
-      int nextIndex = currentIndex + forward*(ballLength);
-      if(i == nextIndex)
-      {
-        strip.setPixelColor(nextIndex, BigWheel(currTargetWheel));
-        found = true;
-      }
-      else if((forward > 0 && i < nextIndex && i > currentIndex) ||
-        (forward < 0 && i < currentIndex && i > nextIndex))
-      {
-        found = true;
-      }
-      else if(i == currentIndex)
-      {
-        strip.setPixelColor(currentIndex, BigWheel(currAntiTargetWheel));
-        found = true;
-      }
-
-      if(!found)
-        strip.setPixelColor(i, BigWheel(currInverseWheel));
-    }
-    strip.show();
-
-    // Control Logic
-    if(currInverseWheel != inverseWheel)
-    {
-      currInverseWheel += fadeSpeed;
-
-      if(currInverseWheel <= inverseWheel+fadeSpeed/2 &&
-        currInverseWheel >= inverseWheel-fadeSpeed/2)
-      {
-        currInverseWheel = inverseWheel;
-      }
-      if(currInverseWheel >= 511)
-        currInverseWheel = 0;
-    }
-    else
-    {
-      if(currTargetWheel <= targetWheel+fadeSpeed/2 &&
-        currTargetWheel >= targetWheel-fadeSpeed/2)
-      {
-        doIncrement = true;
-        currTargetWheel = inverseWheel;
-        currAntiTargetWheel = targetWheel;
-      }
-      else
-      {
-        currTargetWheel += fadeSpeed;
-        if(currTargetWheel >= 511)
-          currTargetWheel = 0;
-
-        currAntiTargetWheel -= fadeSpeed;
-        if(currAntiTargetWheel <= 0)
-          currAntiTargetWheel = 511;
-      }
-    }
-
-    // move the ball
-    if(doIncrement)
-    {
-      if(forward == 1)
-        currentIndex++;
-      else
-        currentIndex--;
-
-      boolean directionChange = false;
-      if(currentIndex == strip.numPixels()+ballLength)
-      {
-        forward = -1;
-        directionChange = true;
-      }
-      else if(currentIndex == 0-(ballLength))
-      {
-        forward = 1;
-        directionChange = true;
-      }
-
-      if(directionChange)
-      {
-        currTargetWheel = targetWheel;
-        currInverseWheel = inverseWheel;
-        currAntiTargetWheel = inverseWheel;
-
-        targetWheel = random(511);
-        inverseWheel = (targetWheel + 255) % 511;
-      }
-
-      doIncrement = false;
-    }
-
-    // global_miscA (value 0->10) default = 5
-    uint8_t wait = 0;
-    if(global_patternChanged)
-      return;
-    else
-      delay(wait);
-  }
-}
-*/

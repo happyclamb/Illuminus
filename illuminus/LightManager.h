@@ -47,6 +47,7 @@ class LightManager {
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
 		void solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs);
+		void comet();
 };
 
 #endif // __LIGHTMANAGER_H__
