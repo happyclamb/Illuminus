@@ -71,6 +71,7 @@ void init_TIMER2_irq()
 ISR(TIMER2_OVF_vect)
 {
 	lightMan->redrawLights();
+
 	// load timer last to maximize time until next call
 	TCNT2 = 0; // <-- maximum time possible between interrupts
 }
@@ -83,6 +84,9 @@ void loop() {
 		serverLoop();
 	else
 		sentryLoop();
+
+	// Small delay to allow for states to settle down.
+	delay(5);
 }
 
 void serverLoop() {
@@ -160,9 +164,6 @@ void serverLoop() {
 		// Update lastLEDUpdateCheck
 		lastLEDUpdateCheck = millis();
 	}
-
-	// Small delay to allow for states to settle down.
-	delay(5);
 }
 
 void sentryLoop() {
@@ -211,7 +212,4 @@ void sentryLoop() {
 
 	if(inNTPLoop)
 		radioMan->sendNTPRequestToServer();
-
-	// Small delay to allow for states to settle down.
-	delay(5);
 }
