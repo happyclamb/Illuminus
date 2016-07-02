@@ -146,10 +146,10 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
 		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
 		case 2: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
-		case 3: comet(); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
-		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
-		case 6: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
+		case 5: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 6: comet(); break;
 		case 7: debugPattern(); break;
 	}
 }
