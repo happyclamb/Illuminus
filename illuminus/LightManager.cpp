@@ -158,12 +158,7 @@ void LightManager::debugPattern() {
 	unsigned long currTime = radioMan.getAdjustedMillis();
 
 	// Over 2000ms break into 200ms sections (10 total) segments
-	int litIndex = (currTime%(2000))/200;
-
-	// If the index is higher than 5, minus the offset
-	// ie; 7-> 7-5*2 == 4 ... 3 should be lit
-	if (litIndex > 5)
-		litIndex -= (litIndex-5)*2;
+	byte litIndex = (currTime%(1200))/200;
 
 	CRGB paramColor;
 	switch(this->currPattern.pattern_param1%3) {
@@ -213,31 +208,28 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	}
 }
 
-#define COMET_SPEED 500
+#define COMET_SPEED 750
 void LightManager::comet()
 {
-// Ball of light followed by a streak:
-// Turn everyting off for 1/2 second
-//First one brightest, behind it dimming
-// Insta on / fade softly
+	// Want to dim each light from 255->0   over (~255ms*2)
+	// Light moves at about 255ms / light. == MOVE_SPEED
+	// 8 lights * 255 + 1 segent of all black + 2 segment final fade ==  (NUMBER_SENTRIES + 3) * MOVE_SPEED
 
-// Want to dim each light from 255->0   over (~255ms*2)
-// Light moves at about 255ms / light. == MOVE_SPEED
-// 8 lights * 255 + 1 segent of all black + 1 segment final fade ==  (NUMBER_SENTRIES + 2) * MOVE_SPEED
-
-	byte numberOfSteps = NUMBER_SENTRIES + 2;
+	byte numberOfSteps = NUMBER_SENTRIES + 3; // 1 blank extra and 2 fades
 	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
-
 	unsigned long currTime = radioMan.getAdjustedMillis();
-	int currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;
+	byte currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;
 
 	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * COMET_SPEED);
-	int numberOfColorDecreaseSteps = 128;
-	int brightnessLevel = ((COMET_SPEED-timeIntoASegment)*numberOfColorDecreaseSteps)/COMET_SPEED;
+
+	byte numberOfColorDecreaseSteps = 85;
+	byte brightnessLevel = ((COMET_SPEED-timeIntoASegment)*numberOfColorDecreaseSteps)/COMET_SPEED;
 
 	if(currentPatternSegment == (getAddress()+1))
-		brightnessLevel = brightnessLevel + 127;
+		brightnessLevel = brightnessLevel + 170;
 	else if(currentPatternSegment == (getAddress()+2))
+		brightnessLevel = brightnessLevel + 85;
+	else if(currentPatternSegment == (getAddress()+3))
 		brightnessLevel = brightnessLevel;
 	else
 		brightnessLevel = 0;
