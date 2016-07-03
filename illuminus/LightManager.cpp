@@ -3,13 +3,11 @@
 #include <Arduino.h>
 #include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
 
-#include "Utils.h"
 #include "IlluminusDefs.h"
+#include "SingletonManager.h"
 
-#include "RadioManager.h"
-
-LightManager::LightManager(RadioManager& _radioMan):
-	radioMan(_radioMan) {
+LightManager::LightManager(SingletonManager* _singleMan):
+	singleMan(_singleMan) {
 
 	currPattern.pattern = 0;
 	currPattern.pattern_param1 = 0;
@@ -20,9 +18,7 @@ LightManager::LightManager(RadioManager& _radioMan):
 	nextPattern.pattern_param2 = 0;
 
 	nextPatternStartTime = 0;
-}
 
-void LightManager::init() {
 	// Init RTG
 	FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
 	for(int i=0; i<NUM_RGB_LEDS; i++)
@@ -33,6 +29,8 @@ void LightManager::init() {
 	pinMode(BIG_LED_PIN, OUTPUT);
 	byte bigLEDBrightness = 255 * 1.00;
 	analogWrite(BIG_LED_PIN, bigLEDBrightness);
+
+	singleMan->setLightMan(this);
 }
 
 LightPattern LightManager::getPattern() {
@@ -64,13 +62,13 @@ void LightManager::setNextPattern(LightPattern newPattern, unsigned long startTi
 void LightManager::chooseNewPattern() {
 	static unsigned long lastPatternChangeTime = 0;
 
-	unsigned long currTime = radioMan.getAdjustedMillis();
+	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	if(currTime > lastPatternChangeTime + FORCE_PATTERN_CHANGE)
 	{
 		this->nextPattern.pattern = random(0,LIGHT_PATTERNS_DEFINED);
 		this->nextPattern.pattern_param1 = this->currPattern.pattern_param1;
 		this->nextPattern.pattern_param2 = this->currPattern.pattern_param2;
-		nextPatternStartTime = radioMan.getAdjustedMillis() + PATTERN_CHANGE_DELAY;
+		nextPatternStartTime = singleMan->radioMan()->getAdjustedMillis() + PATTERN_CHANGE_DELAY;
 
 		lastPatternChangeTime = currTime;
 	}
@@ -78,12 +76,12 @@ void LightManager::chooseNewPattern() {
 	{
 		// check to see if the pattern_param should be updated...
 		#define TimeBetweenDebugPatternColorChange 1000
-		unsigned long currTime = radioMan.getAdjustedMillis();
+		unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 		static unsigned long colorChoice = 0;
 		if(currTime > colorChoice + TimeBetweenDebugPatternColorChange) {
 			this->nextPattern.pattern_param1++;
-			nextPatternStartTime = radioMan.getAdjustedMillis() + PATTERN_CHANGE_DELAY;
+			nextPatternStartTime = singleMan->radioMan()->getAdjustedMillis() + PATTERN_CHANGE_DELAY;
 		}
 
 	}
@@ -132,7 +130,7 @@ void LightManager::redrawLights() {
 }
 
 void LightManager::checkForPatternUpdate() {
-	unsigned long currTime = radioMan.getAdjustedMillis();
+	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	if(currTime > nextPatternStartTime) {
 		this->currPattern.pattern = this->nextPattern.pattern;
 		this->currPattern.pattern_param1 = this->nextPattern.pattern_param1;
@@ -143,19 +141,19 @@ void LightManager::checkForPatternUpdate() {
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
 	switch(this->currPattern.pattern) {
-		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
-		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
-		case 2: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
-		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
-		case 5: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
-		case 6: comet(); break;
-		case 7: debugPattern(); break;
+		case 0: debugPattern(); break;
+		case 1: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
+		case 2: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
+		case 3: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
+		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
+		case 6: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 7: comet(); break;
 	}
 }
 
 void LightManager::debugPattern() {
-	unsigned long currTime = radioMan.getAdjustedMillis();
+	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	// Over 2000ms break into 200ms sections (10 total) segments
 	byte litIndex = (currTime%(1200))/200;
@@ -185,7 +183,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	if(timingType == PATTERN_TIMING_NONE)
 		currTime = millis();
 	else
-		currTime = radioMan.getAdjustedMillis();
+		currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	// Over 255position*12ms broken into segements
 	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*COLOR_TIME_BETWEEN_WHEEL_STEPS))/COLOR_TIME_BETWEEN_WHEEL_STEPS;
@@ -194,7 +192,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	byte thisSentryOffset = 0;
 	if(timingType == PATTERN_TIMING_STAGGER) {
 		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / NUMBER_SENTRIES;
-		thisSentryOffset = getAddress() * wheelSentryPositionOffsetAmount;
+		thisSentryOffset = singleMan->addrMan()->getAddress() * wheelSentryPositionOffsetAmount;
 	}
 
 	//	CRGB wheelColor = colorFromWheelPosition(wheelPos+thisSentryOffset);
@@ -217,7 +215,7 @@ void LightManager::comet()
 
 	byte numberOfSteps = NUMBER_SENTRIES + 3; // 1 blank extra and 2 fades
 	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
-	unsigned long currTime = radioMan.getAdjustedMillis();
+	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	byte currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;
 
 	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * COMET_SPEED);
@@ -225,11 +223,12 @@ void LightManager::comet()
 	byte numberOfColorDecreaseSteps = 85;
 	byte brightnessLevel = ((COMET_SPEED-timeIntoASegment)*numberOfColorDecreaseSteps)/COMET_SPEED;
 
-	if(currentPatternSegment == (getAddress()+1))
+	byte address = singleMan->addrMan()->getAddress();
+	if(currentPatternSegment == (address+1))
 		brightnessLevel = brightnessLevel + 170;
-	else if(currentPatternSegment == (getAddress()+2))
+	else if(currentPatternSegment == (address+2))
 		brightnessLevel = brightnessLevel + 85;
-	else if(currentPatternSegment == (getAddress()+3))
+	else if(currentPatternSegment == (address+3))
 		brightnessLevel = brightnessLevel;
 	else
 		brightnessLevel = 0;

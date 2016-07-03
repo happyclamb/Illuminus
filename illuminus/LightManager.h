@@ -5,7 +5,9 @@
 #include <FastLED.h>
 
 #include "IlluminusDefs.h"
-#include "RadioManager.h"
+
+#include "SingletonManager.h"
+class SingletonManager;
 
 class LightPattern {
 	public:
@@ -19,11 +21,10 @@ enum LightPatternTimingOptions {
 			PATTERN_TIMING_STAGGER,
 			PATTERN_TIMING_SYNC };
 
-
 class LightManager {
 	public:
-		LightManager(RadioManager& _radioMan);
-		void init();
+		LightManager(SingletonManager* _singleMan);
+		
 		LightPattern getNextPattern();
 		unsigned long getNextPatternStartTime();
 		void setNextPattern(LightPattern newPattern, unsigned long startTime);
@@ -32,7 +33,7 @@ class LightManager {
 
 	private:
 		CRGB ledstrip[NUM_RGB_LEDS];
-		RadioManager& radioMan;
+		SingletonManager* singleMan;
 		LightPattern currPattern;
 		LightPattern nextPattern;
 		unsigned long nextPatternStartTime;

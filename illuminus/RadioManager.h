@@ -6,6 +6,9 @@
 
 #include "IlluminusDefs.h"
 
+#include "SingletonManager.h"
+class SingletonManager;
+
 class RF24Message
 {
 	public:
@@ -38,8 +41,8 @@ struct MessageNode {
 class RadioManager
 {
 	public:
-		RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin);
-		void init();
+		RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin);
+		
 		unsigned long generateUID();
 		unsigned long getAdjustedMillis();
 
@@ -54,6 +57,7 @@ class RadioManager
 		void handleNTPClientRequest(RF24Message* ntpMessage);
 
 	private:
+		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset;
 		byte radioAddresses[6][6];

@@ -4,11 +4,12 @@
 #include "RF24.h"
 
 #include "IlluminusDefs.h"
-#include "Utils.h"
+#include "SingletonManager.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
 
-RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
+RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
+		singleMan(_singleMan),
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
 		currentMillisOffset(0),
 		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL },
@@ -19,9 +20,6 @@ RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		nextReceivedUIDIndex(0),
 		informServerWhenNTPDone(false)
 {
-}
-
-void RadioManager::init() {
 	// Init Radio
 	rf24.begin();
 
@@ -63,11 +61,13 @@ void RadioManager::init() {
 
 	// Seed the random generator for message UID
 	randomSeed(analogRead(1));
+
+	singleMan->setRadioMan(this);
 }
 
 unsigned long RadioManager::generateUID() {
 	unsigned long generatedUID = micros() << 3;
-	generatedUID |= getAddress();
+	generatedUID |= singleMan->addrMan()->getAddress();
 	return(generatedUID);
 }
 
@@ -227,7 +227,7 @@ void RadioManager::sendNTPRequestToServer()
 {
 	RF24Message ntpOut;
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
-	ntpOut.sentryRequestID = getAddress();
+	ntpOut.sentryRequestID = singleMan->addrMan()->getAddress();
 	ntpOut.UID = generateUID();
 	ntpOut.server_end = 0;
 	ntpOut.server_start = 0;
@@ -277,7 +277,7 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 				RF24Message ntpClientFinished;
 				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
 				ntpClientFinished.client_start = averagedOffset;
-				ntpClientFinished.sentryRequestID = getAddress();
+				ntpClientFinished.sentryRequestID = singleMan->addrMan()->getAddress();
 				ntpClientFinished.UID = generateUID();
 				sendMessage(ntpClientFinished);
 			}
