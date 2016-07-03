@@ -124,9 +124,25 @@ void LightManager::colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte 
 //*********  Everything from here forward runs on interrupt !! *******
 //*********
 void LightManager::redrawLights() {
-	checkForPatternUpdate();
-	updateLEDArrayFromCurrentPattern();
+	// If there is no address gently pulse blue light
+	if(singleMan->addrMan()->hasAddress() == false) {
+		noAddressPattern();
+	} else {
+		checkForPatternUpdate();
+		updateLEDArrayFromCurrentPattern();
+	}
+
 	FastLED.show();
+}
+
+void LightManager::noAddressPattern() {
+	int fadeIndex = ( millis() % (300*7) ) / 7;
+
+	if(fadeIndex > 150)
+		fadeIndex = 150 - (fadeIndex-150);
+
+	for(int i=0; i<NUM_RGB_LEDS; i++)
+		ledstrip[i] = CRGB(0,0,fadeIndex);
 }
 
 void LightManager::checkForPatternUpdate() {

@@ -24,7 +24,7 @@ enum LightPatternTimingOptions {
 class LightManager {
 	public:
 		LightManager(SingletonManager* _singleMan);
-		
+
 		LightPattern getNextPattern();
 		unsigned long getNextPatternStartTime();
 		void setNextPattern(LightPattern newPattern, unsigned long startTime);
@@ -45,6 +45,7 @@ class LightManager {
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b);
 
 		void checkForPatternUpdate();
+		void noAddressPattern();
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
 		void solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs);
