@@ -12,13 +12,6 @@ SingletonManager *singleMan = NULL;
 void setup() {
 	Serial.begin(9600);
 
-	// Setup the addressing pins
-	pinMode(ADDR_0_PIN, INPUT);
-	pinMode(ADDR_1_PIN, INPUT);
-	pinMode(ADDR_2_PIN, INPUT);
-	pinMode(ADDR_3_PIN, INPUT);
-	pinMode(ADDR_4_PIN, INPUT);
-
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
 

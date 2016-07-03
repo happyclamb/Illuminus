@@ -11,6 +11,13 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 	zoneSet(false),
 	zone(0)
 {
+	// Setup the addressing pins
+	pinMode(ADDR_0_PIN, INPUT);
+	pinMode(ADDR_1_PIN, INPUT);
+	pinMode(ADDR_2_PIN, INPUT);
+	pinMode(ADDR_3_PIN, INPUT);
+	pinMode(ADDR_4_PIN, INPUT);
+
 	singleMan->setAddrMan(this);
 }
 
