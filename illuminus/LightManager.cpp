@@ -155,14 +155,16 @@ void LightManager::checkForPatternUpdate() {
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
 	switch(this->currPattern.pattern) {
-		case 0: debugPattern(); break;
-		case 1: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
-		case 2: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
+		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
+		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
+		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, true); break;
 		case 3: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
 		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
 		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
-		case 6: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
-		case 7: comet(); break;
+		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, false); break;
+		case 7: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 8: comet(); break;
+		case 9: debugPattern(); break;
 	}
 }
 
@@ -207,6 +209,9 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	if(timingType == PATTERN_TIMING_STAGGER) {
 		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / singleMan->addrMan()->getLanternCount();
 		thisSentryOffset = singleMan->addrMan()->getAddress() * wheelSentryPositionOffsetAmount;
+	} else if(timingType == PATTERN_TIMING_STAGGER) {
+		if(singleMan->addrMan()->getAddress()%2 == 0)
+			thisSentryOffset = 128;
 	}
 
 	//	CRGB wheelColor = colorFromWheelPosition(wheelPos+thisSentryOffset);

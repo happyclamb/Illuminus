@@ -19,6 +19,7 @@ class LightPattern {
 enum LightPatternTimingOptions {
 			PATTERN_TIMING_NONE,
 			PATTERN_TIMING_STAGGER,
+			PATTERN_TIMING_ALTERNATE,
 			PATTERN_TIMING_SYNC };
 
 class LightManager {
