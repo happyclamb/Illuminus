@@ -33,10 +33,10 @@ class LightManager {
 
 	private:
 		CRGB ledstrip[NUM_RGB_LEDS];
-		SingletonManager* singleMan;
+		SingletonManager* singleMan = NULL;
 		LightPattern currPattern;
 		LightPattern nextPattern;
-		unsigned long nextPatternStartTime;
+		unsigned long nextPatternStartTime = 0;
 
 		LightPattern getPattern();
 		void setPattern(LightPattern newPattern);

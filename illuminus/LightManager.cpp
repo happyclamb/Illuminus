@@ -17,8 +17,6 @@ LightManager::LightManager(SingletonManager* _singleMan):
 	nextPattern.pattern_param1 = 0;
 	nextPattern.pattern_param2 = 0;
 
-	nextPatternStartTime = 0;
-
 	// Init RTG
 	FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
 	for(int i=0; i<NUM_RGB_LEDS; i++)
@@ -207,7 +205,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	// Now handle the stagger between sentries.
 	byte thisSentryOffset = 0;
 	if(timingType == PATTERN_TIMING_STAGGER) {
-		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / NUMBER_SENTRIES;
+		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / singleMan->addrMan()->getLanternCount();
 		thisSentryOffset = singleMan->addrMan()->getAddress() * wheelSentryPositionOffsetAmount;
 	}
 
@@ -229,7 +227,7 @@ void LightManager::comet()
 	// Light moves at about 255ms / light. == MOVE_SPEED
 	// 8 lights * 255 + 1 segent of all black + 2 segment final fade ==  (NUMBER_SENTRIES + 3) * MOVE_SPEED
 
-	byte numberOfSteps = NUMBER_SENTRIES + 3; // 1 blank extra and 2 fades
+	byte numberOfSteps = singleMan->addrMan()->getLanternCount() + 3; // 1 blank extra and 2 fades
 	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	byte currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;

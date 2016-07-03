@@ -12,21 +12,26 @@ class SingletonManager;
 class RF24Message
 {
 	public:
-		byte messageType; // byte
+		byte messageType = 0; // byte
+		unsigned long UID = 0; // 4 bytes
 
-		byte sentryRequestID; // byte
-		unsigned long UID; // 4 bytes
+		byte sentrySrcID = 0; // byte
+		byte sentryTargetID = 0; // byte
 
-		byte byteParam1; // byte
-		byte byteParam2; // byte
+		byte byteParam1 = 0; // byte
+		byte byteParam2 = 0; // byte
+		byte byteParam3 = 0; // byte
 
-		unsigned long client_start; // 4 bytes
-		unsigned long client_end; // 4 bytes
-		unsigned long server_start; // 4 bytes
-		unsigned long server_end; // 4 bytes
+		unsigned long client_start = 0; // 4 bytes
+		unsigned long client_end = 0; // 4 bytes
+		unsigned long server_start = 0; // 4 bytes
+		unsigned long server_end = 0; // 4 bytes
 };
 
 enum Radio_Message_Type {
+			BLANK_MESSAGE,
+			NEW_ADDRESS_REQUEST,
+			NEW_ADDRESS_RESPONSE,
 			NTP_COORD_MESSAGE,
 			NTP_CLIENT_REQUEST,
 			NTP_SERVER_RESPONSE,
@@ -42,7 +47,7 @@ class RadioManager
 {
 	public:
 		RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin);
-		
+
 		unsigned long generateUID();
 		unsigned long getAdjustedMillis();
 
@@ -59,14 +64,15 @@ class RadioManager
 	private:
 		SingletonManager* singleMan;
 		RF24 rf24;
-		long currentMillisOffset;
+		long currentMillisOffset = 0;
 		byte radioAddresses[6][6];
-		MessageNode* messageQueue;
+		MessageNode* messageQueue = NULL;
 		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
-		int nextSentUIDIndex;
+		int nextSentUIDIndex = 0;
 		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
-		int nextReceivedUIDIndex;
-		bool informServerWhenNTPDone;
+		int nextReceivedUIDIndex = 0;
+		bool informServerWhenNTPDone = true;
+		int analogSeed = 0;
 
 		void setMillisOffset(long newOffset);
 		bool pushMessage(RF24Message* newMessage);

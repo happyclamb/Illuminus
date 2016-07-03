@@ -11,14 +11,7 @@
 RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		singleMan(_singleMan),
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
-		currentMillisOffset(0),
-		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL },
-		messageQueue(NULL),
-		sentUIDs(),
-		nextSentUIDIndex(0),
-		receivedUIDs(),
-		nextReceivedUIDIndex(0),
-		informServerWhenNTPDone(false)
+		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL }
 {
 	// Init Radio
 	rf24.begin();
@@ -60,7 +53,8 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 	}
 
 	// Seed the random generator for message UID
-	randomSeed(analogRead(1));
+	analogSeed = analogRead(1);
+	randomSeed(analogSeed);
 
 	singleMan->setRadioMan(this);
 }
@@ -68,12 +62,11 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 unsigned long RadioManager::generateUID() {
 	unsigned long generatedUID = micros() << 3;
 	generatedUID |= singleMan->addrMan()->getAddress();
+
 	return(generatedUID);
 }
 
 void RadioManager::setMillisOffset(long newOffset) {
-//	Serial.print("RadioManager::setMillisOffset    newOffset: ");
-//	Serial.println(newOffset);
 	currentMillisOffset = newOffset;
 }
 
@@ -99,9 +92,6 @@ bool RadioManager::checkRadioForData() {
 		//	update server_start time
 		if(newMessage->messageType == NTP_CLIENT_REQUEST)
 			newMessage->server_start = micros();
-
-//Serial.print("pushMessage: ");
-//Serial.println(newMessage->UID);
 
 		if(pushMessage(newMessage) == false)
 			delete newMessage;
@@ -162,6 +152,8 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 
 // Ponder sending multiple times ??
 void RadioManager::sendMessage(RF24Message messageToSend) {
+
+	messageToSend.UID = generateUID();
 
 	// Mark as sent
 	bool alreadySent = false;
@@ -227,8 +219,8 @@ void RadioManager::sendNTPRequestToServer()
 {
 	RF24Message ntpOut;
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
-	ntpOut.sentryRequestID = singleMan->addrMan()->getAddress();
-	ntpOut.UID = generateUID();
+	ntpOut.sentrySrcID = singleMan->addrMan()->getAddress();
+	ntpOut.sentryTargetID = 0;
 	ntpOut.server_end = 0;
 	ntpOut.server_start = 0;
 	ntpOut.client_end = 0;
@@ -277,8 +269,8 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 				RF24Message ntpClientFinished;
 				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
 				ntpClientFinished.client_start = averagedOffset;
-				ntpClientFinished.sentryRequestID = singleMan->addrMan()->getAddress();
-				ntpClientFinished.UID = generateUID();
+				ntpClientFinished.sentrySrcID = singleMan->addrMan()->getAddress();
+				ntpClientFinished.sentryTargetID = 0;
 				sendMessage(ntpClientFinished);
 			}
 
@@ -341,12 +333,11 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 void RadioManager::handleNTPClientRequest(RF24Message* ntpMessage) {
 	static int getNTPRequestCount=0;
 
-	// since we're reusing the message; need to update the
-	// messageID or else echoing won't work
-	ntpMessage->UID = generateUID();
-
 	// Set the payload
 	ntpMessage->messageType = NTP_SERVER_RESPONSE;
+	ntpMessage->sentryTargetID = ntpMessage->sentrySrcID;
+	ntpMessage->sentrySrcID = 0;
+
 	ntpMessage->server_end = micros();
 	sendMessage(*ntpMessage);
 }
