@@ -12,9 +12,6 @@ class AddressManager
 	public:
 		AddressManager(SingletonManager* _singleMan);
 
-		byte getLanternCount() { return lanternCount; }
-		void setLanternCount(byte numLanterns) { lanternCount = numLanterns; }
-
 		byte getZone();
 
 		bool hasAddress();
@@ -27,7 +24,6 @@ class AddressManager
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
 		byte address = 0;
-		byte lanternCount = 0;
 		bool zoneSet = false;
 		byte zone = 0;
 

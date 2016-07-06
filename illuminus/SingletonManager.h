@@ -10,6 +10,8 @@ class LightManager;
 #include "AddressManager.h"
 class AddressManager;
 
+#include "HealthManager.h"
+class HealthManager;
 
 class SingletonManager
 {
@@ -25,10 +27,14 @@ class SingletonManager
 		AddressManager* addrMan()  { return addrManager; }
 		void setAddrMan(AddressManager* _addrMan) { addrManager = _addrMan; }
 
+		HealthManager* healthMan()  { return healthManager; }
+		void setHealthMan(HealthManager* _healthMan) { healthManager = _healthMan; }
+
 	private:
 		RadioManager* radioManager = NULL;
 		LightManager* lightManager = NULL;
 		AddressManager* addrManager = NULL;
+		HealthManager* healthManager = NULL;
 };
 
 #endif // __SINGLETONMANAGER_H__

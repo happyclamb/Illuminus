@@ -74,7 +74,6 @@ unsigned long RadioManager::getAdjustedMillis() {
 	return millis() + currentMillisOffset;
 }
 
-
 bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 	informServerWhenNTPDone = newValue;
 }
@@ -114,6 +113,8 @@ RF24Message* RadioManager::popMessage() {
 }
 
 bool RadioManager::pushMessage(RF24Message *newMessage) {
+//	Serial.println("pushMessage   A ");
+
 	// If we've already sent or received this message let it die here
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(sentUIDs[i] == newMessage->UID) {
@@ -123,6 +124,7 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 			return false;
 		}
 	}
+// Serial.println("pushMessage   B ");
 
 	if(messageQueue == NULL)
 	{
@@ -132,14 +134,15 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 	}
 	else
 	{
-		MessageNode *tail = NULL;
-		while((tail = messageQueue->next) != NULL)
-		{
-			MessageNode *newNode = new MessageNode();
-			tail->next = newNode;
-			newNode->message = newMessage;
-			newNode->next = NULL;
-		}
+		MessageNode *lastNode = messageQueue;
+
+		// find last location to insert message
+		while(lastNode->next != NULL)
+			lastNode = lastNode->next;
+
+		MessageNode *newNode = new MessageNode();
+		lastNode->next = newNode;
+		newNode->message = newMessage;
 	}
 
 	// Store this as received
@@ -151,9 +154,9 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 }
 
 // Ponder sending multiple times ??
-void RadioManager::sendMessage(RF24Message messageToSend) {
-
-	messageToSend.UID = generateUID();
+void RadioManager::internalSendMessage(RF24Message messageToSend) {
+//	Serial.print("Sending message with UID: ");
+//	Serial.println(messageToSend.UID);
 
 	// Mark as sent
 	bool alreadySent = false;
@@ -192,7 +195,7 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 */
 
 	// Doing one realy quick and dirty resend here after a short delay
-	delay(1);
+	delay(2);
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
 	rf24.openWritingPipe(radioAddresses[0]);
@@ -200,6 +203,15 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 	rf24.openWritingPipe(radioAddresses[3]);
 	rf24.openReadingPipe(1, radioAddresses[0]);
 	rf24.startListening();
+}
+
+void RadioManager::sendMessage(RF24Message messageToSend) {
+
+		// Sending messages requires a new UID; but don't want
+		//	to change UID when echoing!
+		messageToSend.UID = generateUID();
+
+		internalSendMessage(messageToSend);
 }
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {
@@ -212,7 +224,7 @@ void RadioManager::echoMessage(RF24Message messageToEcho) {
 		}
 	}
 
-	sendMessage(messageToEcho);
+	internalSendMessage(messageToEcho);
 }
 
 void RadioManager::sendNTPRequestToServer()
@@ -268,9 +280,9 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 				// Tell the server that syncronization has happened.
 				RF24Message ntpClientFinished;
 				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
-				ntpClientFinished.client_start = averagedOffset;
 				ntpClientFinished.sentrySrcID = singleMan->addrMan()->getAddress();
 				ntpClientFinished.sentryTargetID = 0;
+				ntpClientFinished.client_start = averagedOffset;
 				sendMessage(ntpClientFinished);
 			}
 

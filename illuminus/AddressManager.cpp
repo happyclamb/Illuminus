@@ -50,18 +50,17 @@ byte AddressManager::getAddress() {
 void AddressManager::sendAddressRequest() {
 	RF24Message addressRequestMessage;
 	addressRequestMessage.messageType = NEW_ADDRESS_REQUEST;
+	addressRequestMessage.sentrySrcID = 255;
+	addressRequestMessage.sentryTargetID = 0;
 	singleMan->radioMan()->sendMessage(addressRequestMessage);
 
 	unsigned long requestStart = millis();
-
 	while(hasAddress() == false && millis() < (requestStart + 2000)) {
-
 		singleMan->radioMan()->checkRadioForData();
 		RF24Message *currMessage = singleMan->radioMan()->popMessage();
 		while(currMessage != NULL) {
 			if(currMessage->messageType == NEW_ADDRESS_RESPONSE) {
 				setAddress(currMessage->byteParam1);
-				lanternCount = getAddress() + 1;
 			}
 			delete currMessage;
 
@@ -74,16 +73,18 @@ void AddressManager::sendAddressRequest() {
 
 void AddressManager::obtainAddress() {
 
-	for(int i=0; i<7; i++) {
+	for(byte i=0; i<3; i++) {
+		Serial.print("Attempt to get address: ");
+		Serial.println(i);
 		sendAddressRequest();
 		if(hasAddress())
 			break;
+		delay(100);
 	}
 
-	// if timed out after 7 tries getting an address then there is no one else so become server
+	// if timed out after 3 tries getting an address then there is no one else so become server
 	if(hasAddress() == false) {
 		setAddress(0);
-		lanternCount = 1;
 	}
 
 	Serial.print("address: ");
@@ -91,11 +92,13 @@ void AddressManager::obtainAddress() {
 }
 
 void AddressManager::sendNewAddressResponse() {
+	byte targetSentry = singleMan->healthMan()->nextAvailSentryID();
+
 	RF24Message addressResponseMessage;
 	addressResponseMessage.messageType = NEW_ADDRESS_RESPONSE;
-	addressResponseMessage.byteParam1 = lanternCount;
-	singleMan->radioMan()->sendMessage(addressResponseMessage);
+	addressResponseMessage.sentrySrcID = 0;
+	addressResponseMessage.sentryTargetID = targetSentry;
+	addressResponseMessage.byteParam1 = targetSentry;
 
-	// A new lantern was added; increase count
-	lanternCount++;
+	singleMan->radioMan()->sendMessage(addressResponseMessage);
 }

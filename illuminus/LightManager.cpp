@@ -68,6 +68,8 @@ void LightManager::chooseNewPattern() {
 		this->nextPattern.pattern_param2 = this->currPattern.pattern_param2;
 		nextPatternStartTime = singleMan->radioMan()->getAdjustedMillis() + PATTERN_CHANGE_DELAY;
 
+//Serial.println("New Pattern Change");
+
 		lastPatternChangeTime = currTime;
 	}
 	else
@@ -207,7 +209,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	// Now handle the stagger between sentries.
 	byte thisSentryOffset = 0;
 	if(timingType == PATTERN_TIMING_STAGGER) {
-		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL / singleMan->addrMan()->getLanternCount();
+		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL  / singleMan->healthMan()->totalSentries() ;
 		thisSentryOffset = singleMan->addrMan()->getAddress() * wheelSentryPositionOffsetAmount;
 	} else if(timingType == PATTERN_TIMING_STAGGER) {
 		if(singleMan->addrMan()->getAddress()%2 == 0)
@@ -232,7 +234,7 @@ void LightManager::comet()
 	// Light moves at about 255ms / light. == MOVE_SPEED
 	// 8 lights * 255 + 1 segent of all black + 2 segment final fade ==  (NUMBER_SENTRIES + 3) * MOVE_SPEED
 
-	byte numberOfSteps = singleMan->addrMan()->getLanternCount() + 3; // 1 blank extra and 2 fades
+	byte numberOfSteps = singleMan->healthMan()->totalSentries() + 3; // 1 blank extra and 2 fades
 	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	byte currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;

@@ -38,9 +38,10 @@ enum Radio_Message_Type {
 			NTP_CLIENT_FINISHED,
 			COLOR_MESSAGE };
 
-struct MessageNode {
-	RF24Message *message;
-	MessageNode *next;
+class MessageNode {
+	public:
+		RF24Message *message = NULL;
+		MessageNode *next = NULL;
 };
 
 class RadioManager
@@ -74,6 +75,7 @@ class RadioManager
 		bool informServerWhenNTPDone = true;
 		int analogSeed = 0;
 
+		void internalSendMessage(RF24Message messageToSend);
 		void setMillisOffset(long newOffset);
 		bool pushMessage(RF24Message* newMessage);
 		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
