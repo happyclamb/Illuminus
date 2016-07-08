@@ -97,7 +97,9 @@ bool RadioManager::checkRadioForData() {
 		// If the payload is a NTP_CLIENT_REQUEST then immediately
 		//	update server_start time
 		if(newMessage->messageType == NTP_CLIENT_REQUEST)
-			newMessage->server_start = micros();
+			newMessage->server_start = millis();
+		else if(newMessage->messageType == NTP_SERVER_RESPONSE)
+				newMessage->client_end = millis();
 
 		if(pushMessage(newMessage) == false)
 			delete newMessage;
@@ -228,7 +230,7 @@ void RadioManager::echoMessage(RF24Message messageToEcho) {
 	internalSendMessage(messageToEcho);
 }
 
-void RadioManager::sendNTPRequestToServer()
+NTP_state RadioManager::sendNTPRequestToServer()
 {
 	RF24Message ntpOut;
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
@@ -237,23 +239,29 @@ void RadioManager::sendNTPRequestToServer()
 	ntpOut.server_end = 0;
 	ntpOut.server_start = 0;
 	ntpOut.client_end = 0;
-	ntpOut.client_start = micros();
+	ntpOut.client_start = millis();
 
 	sendMessage(ntpOut);
+
+	return(NTP_WAITING_FOR_RESPONSE);
 }
 
-bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
+NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 	static long offsetCollection[NTP_OFFSET_SUCCESSES_REQUIRED];
-	static int currOffsetIndex = 0;
+	static byte currOffsetIndex = 0;
 
-	bool inNTPLoop = true;
+	NTP_state returnState = NTP_SEND_REQUEST;
 
 	long ntpOffset = calculateOffsetFromNTPResponseFromServer(ntpMessage);
 	if(ntpOffset != 0)
 	{
+		debug_print("Offset: ");
+		debug_print(currOffsetIndex);
+		debug_print("   value:");
+		debug_println(ntpOffset);
+
 		offsetCollection[currOffsetIndex] = ntpOffset;
 		currOffsetIndex++;
-
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
 		if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
 
@@ -290,26 +298,29 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 			// reset variables to wait for next NTP sync
 			informServerWhenNTPDone = false;
 			currOffsetIndex = 0;
-			inNTPLoop = false;
+			returnState = NTP_DONE;
 		}
 	}
 
-	return(inNTPLoop);
+	return(returnState);
 }
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
-/*
-	debug_print("calculateOffset --> VagueTxRxTime: ");
-	debug_print(ntpMessage->client_end - ntpMessage->client_start);
-	debug_print("    client_start: ");
-	debug_print(ntpMessage->client_start);
-	debug_print("    client_end: ");
-	debug_print(ntpMessage->client_end);
-	debug_print("    server_start: ");
-	debug_print(ntpMessage->server_start);
-	debug_print("    server_end: ");
-	debug_println(ntpMessage->server_end);
-*/
+
+	timing_println("***calculateOffsetFromNTPResponseFromServer ************************");
+
+	timing_print("calculateOffset --> VagueTxRxTime: ");
+	timing_print(ntpMessage->client_end - ntpMessage->client_start);
+
+	timing_print("    client_start: ");
+	timing_print(ntpMessage->client_start);
+	timing_print("    client_end: ");
+	timing_print(ntpMessage->client_end);
+	timing_print("    server_start: ");
+	timing_print(ntpMessage->server_start);
+	timing_print("    server_end: ");
+	timing_println(ntpMessage->server_end);
+
 	/* Have enough data to Do The Math
 			https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
 		offSet = ((t1 - t0) + (t2-t3)) / 2
@@ -325,6 +336,16 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
+	timing_print("t1_t0: ");
+	timing_print(t1_t0);
+	timing_print("    t2_t3: ");
+	timing_print(t2_t3);
+	timing_print("    offset_LL: ");
+	timing_print(t1_t0 + t2_t3);
+	timing_print("    offset: ");
+	timing_println(offset);
+
+
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
 	long t3_t0 = ntpMessage->client_end - ntpMessage->client_start;
 	long t2_t1 = ntpMessage->server_end - ntpMessage->server_start;
@@ -333,8 +354,20 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
+	timing_print("t3_t0: ");
+	timing_print(t3_t0);
+	timing_print("    t2_t1: ");
+	timing_print(t2_t1);
+	timing_print("    halfRtripDelay: ");
+	timing_print(halfRtripDelay);
+	timing_print("    offset: ");
+	timing_println(offset);
+/*
 	// Need to convert from Micros to Millis
 	offset = ((offset+500)/1000);
+	timing_print("Final offset: ");
+	timing_println(offset);
+*/
 
 	// return
 	return(offset);
@@ -349,6 +382,6 @@ void RadioManager::handleNTPClientRequest(RF24Message* ntpMessage) {
 	ntpMessage->sentryTargetID = ntpMessage->sentrySrcID;
 	ntpMessage->sentrySrcID = 0;
 
-	ntpMessage->server_end = micros();
+	ntpMessage->server_end = millis();
 	sendMessage(*ntpMessage);
 }

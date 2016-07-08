@@ -1,9 +1,6 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
-#define INFO
-#define DEBUG
-
 #ifdef INFO
  #define info_print(x)     Serial.print(x)
  #define info_println(x)   Serial.println(x)
@@ -18,6 +15,14 @@
 #else
  #define debug_print(x)
  #define debug_println(x)
+#endif
+
+#ifdef TIMING
+ #define timing_print(x)     Serial.print(x)
+ #define timing_println(x)   Serial.println(x)
+#else
+ #define timing_print(x)
+ #define timing_println(x)
 #endif
 
 const unsigned long TIME_BETWEEN_NTP_MSGS = 5000;

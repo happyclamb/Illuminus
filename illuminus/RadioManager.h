@@ -44,6 +44,11 @@ class MessageNode {
 		MessageNode *next = NULL;
 };
 
+enum NTP_state {
+			NTP_DONE,
+			NTP_WAITING_FOR_RESPONSE,
+			NTP_SEND_REQUEST };
+
 class RadioManager
 {
 	public:
@@ -59,8 +64,8 @@ class RadioManager
 
 		void sendMessage(RF24Message messageToSend);
 		void echoMessage(RF24Message messageToEcho);
-		void sendNTPRequestToServer();
-		bool handleNTPServerResponse(RF24Message* ntpMessage);
+		NTP_state sendNTPRequestToServer();
+		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
 		void handleNTPClientRequest(RF24Message* ntpMessage);
 
 	private:

@@ -34,8 +34,15 @@ void setup() {
 	init_TIMER2_irq();
 
 	Serial.println("Setup complete");
+
+//#define INFO
 	info_println("Info Logging enabled");
+
+//#define DEBUG
 	debug_println("Debug Logging enabled");
+
+//#define TIMING
+	timing_println("Timing Logging enabled");
 }
 
 // initialize timer2 to redraw the LED strip and BigLight
@@ -202,11 +209,17 @@ void serverLoop() {
 	}
 }
 
+
+
+
+
 void sentryLoop(bool forceNTPCheck) {
-	static bool inNTPLoop = false;
+	static NTP_state ntpState = NTP_DONE;
+	static unsigned long timeOfLastNTPRequest = 0;
 
 	if(forceNTPCheck) {
-		inNTPLoop = true;
+		ntpState = NTP_SEND_REQUEST;
+		timeOfLastNTPRequest = 0;
 		singleMan->radioMan()->setInformServerWhenNTPDone(true);
 	}
 
@@ -214,8 +227,8 @@ void sentryLoop(bool forceNTPCheck) {
 	singleMan->radioMan()->checkRadioForData();
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 
-	if(currMessage != NULL)
-	{
+	if(currMessage != NULL) {
+
 		singleMan->healthMan()->updateSentryNTPRequestTime(currMessage->sentrySrcID);
 
 		bool doEcho = true;
@@ -230,15 +243,20 @@ void sentryLoop(bool forceNTPCheck) {
 
 					// Don't need to echo this message as it is now at final destination
 					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->byteParam1 == 1 ? true : false);
-					inNTPLoop = true;
+					ntpState = NTP_SEND_REQUEST;
+					timeOfLastNTPRequest = 0;
 					doEcho = false;
 				}
 				break;
 
 			case NTP_SERVER_RESPONSE:
 				if(currMessage->sentryTargetID == address) {
+					if(ntpState != NTP_DONE) {
+						ntpState = singleMan->radioMan()->handleNTPServerResponse(currMessage);
+						debug_print("NTP Server Response Handled. New state: ");
+						debug_println(ntpState);
+					}
 					// Don't need to echo this message as it is now complete
-					inNTPLoop = singleMan->radioMan()->handleNTPServerResponse(currMessage);
 					doEcho = false;
 				}
 				break;
@@ -264,6 +282,19 @@ void sentryLoop(bool forceNTPCheck) {
 		delete currMessage;
 	}
 
-	if(inNTPLoop)
-		singleMan->radioMan()->sendNTPRequestToServer();
+	if(ntpState == NTP_WAITING_FOR_RESPONSE) {
+		// lets assume we need 3* the number of requests sent, so each request has that long to timeout.
+		unsigned long ntpRequestTimeout = TIME_BETWEEN_NTP_MSGS / ((unsigned long ) NTP_OFFSET_SUCCESSES_REQUIRED * 3);
+		if(millis() > timeOfLastNTPRequest + ntpRequestTimeout) {
+			debug_println("NTP Request timeout");
+			// assume that request has timedout and send another
+			ntpState = NTP_SEND_REQUEST;
+		}
+	}
+
+	if(ntpState == NTP_SEND_REQUEST) {
+			debug_println("Sending Request");
+			ntpState = singleMan->radioMan()->sendNTPRequestToServer();
+			timeOfLastNTPRequest = millis();
+	}
 }
