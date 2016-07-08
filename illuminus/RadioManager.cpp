@@ -255,11 +255,6 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 	long ntpOffset = calculateOffsetFromNTPResponseFromServer(ntpMessage);
 	if(ntpOffset != 0)
 	{
-		debug_print("Offset: ");
-		debug_print(currOffsetIndex);
-		debug_print("   value:");
-		debug_println(ntpOffset);
-
 		offsetCollection[currOffsetIndex] = ntpOffset;
 		currOffsetIndex++;
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
@@ -362,12 +357,6 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	timing_print(halfRtripDelay);
 	timing_print("    offset: ");
 	timing_println(offset);
-/*
-	// Need to convert from Micros to Millis
-	offset = ((offset+500)/1000);
-	timing_print("Final offset: ");
-	timing_println(offset);
-*/
 
 	// return
 	return(offset);

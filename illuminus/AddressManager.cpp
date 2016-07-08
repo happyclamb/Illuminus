@@ -65,7 +65,7 @@ void AddressManager::sendAddressRequest() {
 			currMessage = singleMan->radioMan()->popMessage();
 		}
 
-		delay(3);
+		delay(5);
 	}
 }
 
@@ -77,7 +77,6 @@ void AddressManager::obtainAddress() {
 		sendAddressRequest();
 		if(hasAddress())
 			break;
-		delay(100);
 	}
 
 	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then there is no one else so become server

@@ -114,6 +114,8 @@ void loop() {
 	delay(5);
 }
 
+
+
 void serverLoop() {
 	static bool bootNTPSequence = true;
 	static unsigned long lastNTPCheck = 0;
@@ -256,8 +258,6 @@ void sentryLoop(bool forceNTPCheck) {
 				if(currMessage->sentryTargetID == address) {
 					if(ntpState != NTP_DONE) {
 						ntpState = singleMan->radioMan()->handleNTPServerResponse(currMessage);
-						debug_print("NTP Server Response Handled. New state: ");
-						debug_println(ntpState);
 					}
 					// Don't need to echo this message as it is now complete
 					doEcho = false;
