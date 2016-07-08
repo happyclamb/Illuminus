@@ -11,7 +11,10 @@
 RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		singleMan(_singleMan),
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
-		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL }
+		radioAddresses{ {0xF0F0F0F011LL, 0xF0F0F0F022LL},
+										{0xF0F0F0F044LL, 0xF0F0F0F055LL},
+										{0xF0F0F0F077LL, 0xF0F0F0F088LL},
+										{0xF0F0F0F0AALL, 0xF0F0F0F0BBLL} }
 {
 	// Init Radio
 	rf24.begin();
@@ -36,11 +39,8 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 
 	rf24.setPayloadSize(sizeof(RF24Message));
 
-	// Everyone is listening on [0], will broadcast on [0] and switch back after
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
-//	rf24.openReadingPipe(2, radioAddresses[1]);
-//	rf24.openReadingPipe(3, radioAddresses[2]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 
 	// kick off with listening
 	rf24.startListening();
@@ -179,32 +179,21 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
-	rf24.openWritingPipe(radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.startListening();
 
-/*
-	// Sending on multiple pipes doesn't seem to work as well as
-	//	simply resending on same pipe
-	rf24.stopListening();
-	rf24.closeReadingPipe(2);
-	rf24.openWritingPipe(radioAddresses[1]);
-	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(2, radioAddresses[1]);
-	rf24.startListening();
-*/
 
 	// Doing one realy quick and dirty resend here after a short delay
-	delay(2);
+	delay(5);
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
-	rf24.openWritingPipe(radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.startListening();
 }
 
@@ -230,8 +219,8 @@ void RadioManager::echoMessage(RF24Message messageToEcho) {
 	internalSendMessage(messageToEcho);
 }
 
-NTP_state RadioManager::sendNTPRequestToServer()
-{
+NTP_state RadioManager::sendNTPRequestToServer() {
+
 	RF24Message ntpOut;
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
 	ntpOut.sentrySrcID = singleMan->addrMan()->getAddress();

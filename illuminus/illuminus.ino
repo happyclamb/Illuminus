@@ -296,7 +296,7 @@ void sentryLoop(bool forceNTPCheck) {
 	}
 
 	if(ntpState == NTP_SEND_REQUEST) {
-			debug_println("Sending Request");
+			debug_println("Sending NTP Request");
 			ntpState = singleMan->radioMan()->sendNTPRequestToServer();
 			timeOfLastNTPRequest = millis();
 	}

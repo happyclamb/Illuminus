@@ -10,10 +10,10 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 	// Setup the addressing pins
 	pinMode(ADDR_0_PIN, INPUT);
 	pinMode(ADDR_1_PIN, INPUT);
-	pinMode(ADDR_2_PIN, INPUT);
 
 	singleMan->setAddrMan(this);
 }
+
 
 byte AddressManager::getZone() {
 	if (zoneSet == false)
@@ -23,12 +23,14 @@ byte AddressManager::getZone() {
 			zone += 1;
 		if(digitalRead(ADDR_1_PIN) == LOW)
 			zone += 2;
-		if(digitalRead(ADDR_2_PIN) == LOW)
-			zone += 4;
 
 		zoneSet = true;
+Serial.println("*******************");
+Serial.print("ZONE IS REALLY::: ");
+Serial.println(zone);
+Serial.println("*******************");
 	}
-	return (zone);
+	return (1);
 }
 
 
@@ -39,11 +41,18 @@ bool AddressManager::hasAddress() {
 void AddressManager::setAddress(byte newAddress) {
 	address = newAddress;
 	addressSet = true;
+
+	info_print("Assigned Zone: ");
+	info_println(getZone());
+	info_print("Assigned Address: ");
+	info_println(getAddress());
+delay(5);
 }
 
 byte AddressManager::getAddress() {
 	return address;
 }
+
 
 void AddressManager::sendAddressRequest() {
 	RF24Message addressRequestMessage;
@@ -74,18 +83,19 @@ void AddressManager::obtainAddress() {
 	for(byte i=0; i<NEW_ADDRESS_RETRIES; i++) {
 		info_print("Attempt to get address: ");
 		info_println(i);
+		delay(5);
 		sendAddressRequest();
 		if(hasAddress())
 			break;
+
+		// Need to wait long enough for messages to get processed
+		delay(100);
 	}
 
 	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then there is no one else so become server
 	if(hasAddress() == false) {
 		setAddress(0);
 	}
-
-	info_print("Assigned Address: ");
-	info_println(getAddress());
 }
 
 void AddressManager::sendNewAddressResponse() {

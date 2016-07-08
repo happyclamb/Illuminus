@@ -72,7 +72,7 @@ class RadioManager
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		byte radioAddresses[6][6];
+		byte radioAddresses[4][2][6];
 		MessageNode* messageQueue = NULL;
 		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
 		int nextSentUIDIndex = 0;
