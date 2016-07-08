@@ -21,7 +21,7 @@
 #endif
 
 const unsigned long TIME_BETWEEN_NTP_MSGS = 5000;
-const unsigned long #define TIME_BETWEEN_LED_MSGS = 500;
+const unsigned long TIME_BETWEEN_LED_MSGS = 500;
 #define NEW_ADDRESS_RETRIES 7
 
 #define MAX_STORED_MSG_IDS 64
