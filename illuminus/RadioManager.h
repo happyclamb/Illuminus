@@ -51,6 +51,7 @@ class RadioManager
 
 		unsigned long generateUID();
 		unsigned long getAdjustedMillis();
+		void setMillisOffset(long newOffset);
 
 		bool setInformServerWhenNTPDone(bool newValue);
 		bool checkRadioForData();
@@ -76,7 +77,6 @@ class RadioManager
 		int analogSeed = 0;
 
 		void internalSendMessage(RF24Message messageToSend);
-		void setMillisOffset(long newOffset);
 		bool pushMessage(RF24Message* newMessage);
 		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 };

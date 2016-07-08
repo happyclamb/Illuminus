@@ -11,8 +11,6 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 	pinMode(ADDR_0_PIN, INPUT);
 	pinMode(ADDR_1_PIN, INPUT);
 	pinMode(ADDR_2_PIN, INPUT);
-	pinMode(ADDR_3_PIN, INPUT);
-	pinMode(ADDR_4_PIN, INPUT);
 
 	singleMan->setAddrMan(this);
 }
@@ -73,22 +71,22 @@ void AddressManager::sendAddressRequest() {
 
 void AddressManager::obtainAddress() {
 
-	for(byte i=0; i<3; i++) {
-		Serial.print("Attempt to get address: ");
-		Serial.println(i);
+	for(byte i=0; i<NEW_ADDRESS_RETRIES; i++) {
+		info_print("Attempt to get address: ");
+		info_println(i);
 		sendAddressRequest();
 		if(hasAddress())
 			break;
 		delay(100);
 	}
 
-	// if timed out after 3 tries getting an address then there is no one else so become server
+	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then there is no one else so become server
 	if(hasAddress() == false) {
 		setAddress(0);
 	}
 
-	Serial.print("address: ");
-	Serial.println(getAddress());
+	info_print("Assigned Address: ");
+	info_println(getAddress());
 }
 
 void AddressManager::sendNewAddressResponse() {

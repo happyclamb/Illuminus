@@ -1,8 +1,28 @@
-#ifndef __PINDEFNS_H__
-#define __PINDEFNS_H__
+#ifndef __ILLUMINUSDEFS_H__
+#define __ILLUMINUSDEFS_H__
 
-#define TIME_BETWEEN_NTP_MSGS 5000
-#define TIME_BETWEEN_LED_MSGS 1000
+#define INFO
+#define DEBUG
+
+#ifdef INFO
+ #define info_print(x)     Serial.print(x)
+ #define info_println(x)   Serial.println(x)
+#else
+ #define info_print(x)
+ #define info_println(x)
+#endif
+
+#ifdef DEBUG
+ #define debug_print(x)     Serial.print(x)
+ #define debug_println(x)   Serial.println(x)
+#else
+ #define debug_print(x)
+ #define debug_println(x)
+#endif
+
+const unsigned long TIME_BETWEEN_NTP_MSGS = 5000;
+const unsigned long #define TIME_BETWEEN_LED_MSGS = 500;
+#define NEW_ADDRESS_RETRIES 7
 
 #define MAX_STORED_MSG_IDS 64
 #define NTP_OFFSET_SUCCESSES_REQUIRED 7
@@ -46,6 +66,4 @@
 #define UNUSED_A3_PIN 17		// Digital
 
 
-
-
-#endif // __PINDEFNS_H__
+#endif // __ILLUMINUSDEFS_H__

@@ -23,7 +23,7 @@ class AddressManager
 	private:
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
-		byte address = 0;
+		byte address = 255;
 		bool zoneSet = false;
 		byte zone = 0;
 

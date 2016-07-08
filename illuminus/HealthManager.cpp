@@ -22,6 +22,7 @@ void HealthManager::updateSentryNTPRequestTime(byte id) {
 		currSentry = addSentry(id);
 	}
 	currSentry->last_NTP_request_start = millis();
+	currSentry->isAlive = true;
 
 	// Seems like a good time to double check that everyone is healthy
 	checkAllSentryHealth();
@@ -60,8 +61,6 @@ byte HealthManager::nextAvailSentryID() {
 		// If we found a dead sentry, reuse the ID
 		if(currNode->health->isAlive == false) {
 			nextID = currNode->health->id;
-			// have to revive or else it'll get clobbered
-			currNode->health->isAlive = true;
 			break;
 		}
 
@@ -69,38 +68,45 @@ byte HealthManager::nextAvailSentryID() {
 		currNode = currNode->next;
 	}
 
-Serial.print("NextAvailID: ");
-Serial.println(nextID);
+	info_print("HealthManager::nextAvailSentryID: ");
+	info_println(nextID);
+
 	// set the time to create the Node in the array
 	updateSentryNTPRequestTime(nextID);
+
+	printHealth();
+
 	return nextID;
 }
 
 void HealthManager::checkAllSentryHealth() {
 	SentryHealthNode *currNode = healthQueue;
 
-
 	while(currNode != NULL) {
 
 		// double the amout of time we think the sentry will respond in to give wiggle room
 		unsigned long currTime = millis();
 		unsigned long lastRequest = currNode->health->last_NTP_request_start;
-		unsigned long deadTime = lastRequest + (TIME_BETWEEN_NTP_MSGS * sentryCount * 2);
+		unsigned long deathOffset = TIME_BETWEEN_NTP_MSGS * (unsigned long) sentryCount * 2;
+		unsigned long deadTime = lastRequest + deathOffset;
 
 		if(currTime >= deadTime && currNode->health->isAlive == true) {
-Serial.print("is DEAD  currNode->health->id: ");
-Serial.print(currNode->health->id);
+			currNode->health->isAlive = false;
 
-Serial.print("  currTime:");
-Serial.print(currTime);
-Serial.print("  deadTime:");
-Serial.print(deadTime);
-Serial.print("  lastRequest:");
-Serial.println(lastRequest);
+			info_print("Sentry ");
+			info_print(currNode->health->id);
+			info_print(" went offline   ");
+			debug_print("-->  currTime:");
+			debug_print(currTime);
+			debug_print("  deadTime:");
+			debug_print(deadTime);
+			debug_print("  lastRequest:");
+			debug_print(lastRequest);
+			debug_print("  deathOffset:");
+			debug_println(deathOffset);
+			info_println();
 
-				currNode->health->isAlive = false;
-
-				printHealth();
+			printHealth();
 		}
 
 		currNode = currNode->next;
@@ -108,7 +114,40 @@ Serial.println(lastRequest);
 
 	pruneEndSentries();
 
-//	printHealth();
+	selectNewServer();
+}
+
+void HealthManager::selectNewServer() {
+
+	// if still in setup stage OR already is the server then skip this
+	if(singleMan->addrMan()->hasAddress() == false ||
+			singleMan->addrMan()->getAddress() == 0)
+		return;
+
+	byte currAddress = singleMan->addrMan()->getAddress();
+	bool foundAliveSentry = false;
+	for(byte i=0; i<currAddress; i++) {
+		SentryHealth* foundSentry = findSentry(i);
+		if(foundSentry->isAlive == true) {
+			foundAliveSentry = true;
+			break;
+		}
+	}
+
+	if(foundAliveSentry == false) {
+		singleMan->addrMan()->setAddress(0);
+		singleMan->radioMan()->setMillisOffset(0);
+		updateSentryNTPRequestTime(0);
+
+		SentryHealth* oldSentry = findSentry(currAddress);
+		oldSentry->isAlive = false;
+
+		info_print("Sentry ");
+		info_println(currAddress);
+		info_println(" changed addres to 0 and promoted to Server");
+		printHealth();
+	}
+
 }
 
 void HealthManager::pruneEndSentries() {
@@ -118,8 +157,9 @@ void HealthManager::pruneEndSentries() {
 		// If the lastNode isAlive == false then nuke it
 		if(currNode->next != NULL && currNode->next->next == NULL
 				 && currNode->next->health->isAlive == false) {
-			Serial.print("Removing node:");
-			Serial.println(currNode->next->health->id);
+
+			info_print("Deleting node:");
+			info_println(currNode->next->health->id);
 
 			delete currNode->next->health;
 			currNode->next->health = NULL;
@@ -137,24 +177,30 @@ void HealthManager::pruneEndSentries() {
 void HealthManager::printHealth() {
 	SentryHealthNode *currNode = healthQueue;
 
-	Serial.print("-------HealthManager::printHealth   sentryCount> ");
-	Serial.println(sentryCount);
+	#ifndef DEBUG
+		return;
+	#endif
+
+	debug_print("-------HealthManager::printHealth   currTime> ");
+	debug_println(millis());
+	debug_print("   sentryCount> ");
+	debug_println(sentryCount);
 
 	byte i=0;
 	while(currNode != NULL) {
-		Serial.print("   index:");
-		Serial.print(i);
-		Serial.print("  id:");
-		Serial.print(currNode->health->id);
-		Serial.print("  isAlive:");
-		Serial.print(currNode->health->isAlive);
-		Serial.print("  lastRequest:");
-		Serial.println(currNode->health->last_NTP_request_start);
+		debug_print("   index:");
+		debug_print(i);
+		debug_print("  id:");
+		debug_print(currNode->health->id);
+		debug_print("  isAlive:");
+		debug_print(currNode->health->isAlive);
+		debug_print("  lastRequest:");
+		debug_println(currNode->health->last_NTP_request_start);
 
 		i++;
 		currNode = currNode->next;
 	}
-	Serial.println("---------------------");
+	debug_println("---------------------");
 }
 
 SentryHealth* HealthManager::addSentry(byte newID) {
@@ -175,9 +221,7 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 	} else {
 
 		SentryHealthNode *lastNode = healthQueue;
-		sentryCount = 1;
 		while(lastNode->next != NULL) {
-			sentryCount++;
 			lastNode = lastNode->next;
 		}
 
@@ -193,10 +237,9 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 		sentryCount++;
 	}
 
-	Serial.print("addSentry: New Total Sentries:");
-	Serial.println(sentryCount);
-
-printHealth();
+	info_print("addedSentry: ");
+	info_println(newID);
+	printHealth();
 
 	return(returnHealth);
 }

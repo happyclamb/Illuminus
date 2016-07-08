@@ -30,8 +30,9 @@ class HealthManager
 		byte nextAvailSentryID();
 		SentryHealth* findSentry(byte id);
 		void checkAllSentryHealth();
+		void selectNewServer();
 		void printHealth();
-		
+
 	private:
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;

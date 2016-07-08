@@ -68,6 +68,13 @@ unsigned long RadioManager::generateUID() {
 
 void RadioManager::setMillisOffset(long newOffset) {
 	currentMillisOffset = newOffset;
+	info_print("RadioManager::setMillisOffset:: ");
+	info_print(currentMillisOffset);
+	debug_print("      CurrentTime: ");
+	debug_print(millis());
+	debug_print("      AdjustedTime: ");
+	debug_print(getAdjustedMillis());
+	info_println();
 }
 
 unsigned long RadioManager::getAdjustedMillis() {
@@ -113,8 +120,6 @@ RF24Message* RadioManager::popMessage() {
 }
 
 bool RadioManager::pushMessage(RF24Message *newMessage) {
-//	Serial.println("pushMessage   A ");
-
 	// If we've already sent or received this message let it die here
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(sentUIDs[i] == newMessage->UID) {
@@ -124,7 +129,6 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 			return false;
 		}
 	}
-// Serial.println("pushMessage   B ");
 
 	if(messageQueue == NULL)
 	{
@@ -155,9 +159,6 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 
 // Ponder sending multiple times ??
 void RadioManager::internalSendMessage(RF24Message messageToSend) {
-//	Serial.print("Sending message with UID: ");
-//	Serial.println(messageToSend.UID);
-
 	// Mark as sent
 	bool alreadySent = false;
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
@@ -254,7 +255,7 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 		currOffsetIndex++;
 
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
-		if(currOffsetIndex==NTP_OFFSET_SUCCESSES_REQUIRED) {
+		if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
 
 			for(int i=1;i<NTP_OFFSET_SUCCESSES_REQUIRED;++i)
 			{
@@ -297,21 +298,19 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 }
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
-	// Spew Debug Info
 /*
-	Serial.print("VagueTxRxTime: ");
-	Serial.print(ntpMessage.client_end - ntpMessage.client_start);
-	Serial.print("    client_start: ");
-	Serial.print(ntpMessage.client_start);
-	Serial.print("    client_end: ");
-	Serial.print(ntpMessage.client_end);
-	Serial.print("    server_start: ");
-	Serial.print(ntpMessage.server_start);
-	Serial.print("    server_end: ");
-	Serial.println(ntpMessage.server_end);
+	debug_print("calculateOffset --> VagueTxRxTime: ");
+	debug_print(ntpMessage->client_end - ntpMessage->client_start);
+	debug_print("    client_start: ");
+	debug_print(ntpMessage->client_start);
+	debug_print("    client_end: ");
+	debug_print(ntpMessage->client_end);
+	debug_print("    server_start: ");
+	debug_print(ntpMessage->server_start);
+	debug_print("    server_end: ");
+	debug_println(ntpMessage->server_end);
 */
-
-	/* Finally have enough data to Do The Math
+	/* Have enough data to Do The Math
 			https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
 		offSet = ((t1 - t0) + (t2-t3)) / 2
 		halfRtripDelay = ((t3-t0) - (t2-t1)) / 2

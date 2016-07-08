@@ -11,27 +11,31 @@
 SingletonManager *singleMan = NULL;
 
 void setup() {
+//	Serial.begin(115200);
 	Serial.begin(9600);
-
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
 
-	// Initilize the AddressHandler
+	// Initilize the AddressManager
 	AddressManager *addrMan = new AddressManager(singleMan);
 
-	// Initilize the HealthHandler
+	// Initilize the HealthManager
 	HealthManager *healthMan = new HealthManager(singleMan);
 
-	// Initialize the Radio handler
+	// Initialize the RadioManager
 	RadioManager *radioMan = new RadioManager(singleMan, RADIO_CHIP_ENABLE_PIN, RADIO_CHIP_SELECT_PIN);
 	delay(5); // Wait for radio to init before continuing
 
-	// Initilize the LightHandler
+	// Initilize the LightManager
 	LightManager *lightMan = new LightManager(singleMan);
 	delay(5); // Wait for light to init before continuing
 
 	// Start interrupt handler for LightManagement
 	init_TIMER2_irq();
+
+	Serial.println("Setup complete");
+	info_println("Info Logging enabled");
+	debug_println("Debug Logging enabled");
 }
 
 // initialize timer2 to redraw the LED strip and BigLight
@@ -111,12 +115,6 @@ void serverLoop() {
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 	if(currMessage != NULL)
 	{
-/*
-		Serial.print("NewMsg    msgID: ");
-		Serial.print(currMessage->UID);
-		Serial.print("   type: ");
-		Serial.println(currMessage->messageType);
-*/
 		singleMan->healthMan()->updateSentryNTPRequestTime(currMessage->sentrySrcID);
 
 		switch(currMessage->messageType) {
@@ -161,8 +159,11 @@ void serverLoop() {
 			ntpStartMessage.byteParam1 = bootNTPSequence ? 1 : 0;
 
 			singleMan->radioMan()->sendMessage(ntpStartMessage);
-Serial.print("NTP COORD to: ");
-Serial.println(nextSentryToRunNTP);
+
+			info_print("Sending NTP COORD message to: ");
+			info_println(nextSentryToRunNTP);
+			singleMan->healthMan()->printHealth();
+
 			// Wrap back to start; reset bootNTPSequence if set.
 			nextSentryToRunNTP++;
 			if(nextSentryToRunNTP == singleMan->healthMan()->totalSentries()) {
@@ -189,16 +190,12 @@ Serial.println(nextSentryToRunNTP);
 		lightMessage.sentryTargetID = 255;
 		lightMessage.byteParam1 = nextPattern.pattern;
 		lightMessage.byteParam2 = nextPattern.pattern_param1;
-		lightMessage.server_start = singleMan->lightMan()->getNextPatternStartTime();
+		lightMessage.server_start = nextPattern.startTime;
 
-		// Fire off a message to the next sentry to run an NTPupdate
 		singleMan->radioMan()->sendMessage(lightMessage);
-Serial.print("Sending Light Update      pattern: ");
-Serial.print(nextPattern.pattern);
-Serial.print("      pattern_param1: ");
-Serial.print(nextPattern.pattern_param1);
-Serial.print("      startTime: ");
-Serial.println(singleMan->lightMan()->getNextPatternStartTime());
+		info_print("Sending Light Update    ");
+		nextPattern.printPattern();
+		info_println("");
 
 		// Update lastLEDUpdateCheck
 		lastLEDUpdateCheck = millis();
@@ -223,32 +220,41 @@ void sentryLoop(bool forceNTPCheck) {
 
 		bool doEcho = true;
 		byte address = singleMan->addrMan()->getAddress();
-		switch(currMessage->messageType)
-		{
+		switch(currMessage->messageType) {
+
 			case NTP_COORD_MESSAGE:
-				if(currMessage->sentryTargetID == address)
-				{
+				// keep sentry alive on all COORD messages
+				singleMan->healthMan()->updateSentryNTPRequestTime(address);
+				if(currMessage->sentryTargetID == address) {
+					info_println("NTP_COORD_MESSAGE message received");
+
 					// Don't need to echo this message as it is now at final destination
 					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->byteParam1 == 1 ? true : false);
 					inNTPLoop = true;
 					doEcho = false;
 				}
 				break;
-			case COLOR_MESSAGE:
-				LightPattern nextPattern;
-				nextPattern.pattern = currMessage->byteParam1;
-				nextPattern.pattern_param1 = currMessage->byteParam2;
 
-				// update pattern for LEDs since the interrupt will do the painting
-				singleMan->lightMan()->setNextPattern(nextPattern, currMessage->server_start);
-				break;
 			case NTP_SERVER_RESPONSE:
-				if(currMessage->sentryTargetID == address)
-				{
+				if(currMessage->sentryTargetID == address) {
 					// Don't need to echo this message as it is now complete
 					inNTPLoop = singleMan->radioMan()->handleNTPServerResponse(currMessage);
 					doEcho = false;
 				}
+				break;
+
+			case COLOR_MESSAGE:
+				LightPattern newPattern;
+				newPattern.pattern = currMessage->byteParam1;
+				newPattern.pattern_param1 = currMessage->byteParam2;
+				newPattern.startTime = currMessage->server_start;
+
+				// update pattern for LEDs since the interrupt will do the painting
+				singleMan->lightMan()->setNextPattern(newPattern);
+
+				info_print("COLOR_MESSAGE message received.  Next pattern is:");
+				newPattern.printPattern();
+				info_println();
 				break;
 		}
 

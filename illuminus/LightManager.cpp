@@ -9,14 +9,6 @@
 LightManager::LightManager(SingletonManager* _singleMan):
 	singleMan(_singleMan) {
 
-	currPattern.pattern = 0;
-	currPattern.pattern_param1 = 0;
-	currPattern.pattern_param2 = 0;
-
-	nextPattern.pattern = 0;
-	nextPattern.pattern_param1 = 0;
-	nextPattern.pattern_param2 = 0;
-
 	// Init RTG
 	FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
 	for(int i=0; i<NUM_RGB_LEDS; i++)
@@ -31,59 +23,21 @@ LightManager::LightManager(SingletonManager* _singleMan):
 	singleMan->setLightMan(this);
 }
 
-LightPattern LightManager::getPattern() {
-	return this->currPattern;
-}
-
-void LightManager::setPattern(LightPattern newPattern) {
-	this->currPattern.pattern = newPattern.pattern;
-	this->currPattern.pattern_param1 = newPattern.pattern_param1;
-	this->currPattern.pattern_param2 = newPattern.pattern_param2;
-}
 
 LightPattern LightManager::getNextPattern() {
 	return(this->nextPattern);
 }
-
-unsigned long LightManager::getNextPatternStartTime() {
-	return(this->nextPatternStartTime);
-}
-
-void LightManager::setNextPattern(LightPattern newPattern, unsigned long startTime) {
-	this->nextPattern.pattern = newPattern.pattern;
-	this->nextPattern.pattern_param1 = newPattern.pattern_param1;
-	this->nextPattern.pattern_param2 = newPattern.pattern_param2;
-
-	this->nextPatternStartTime = startTime;
+void LightManager::setNextPattern(LightPattern newPattern) {
+	this->nextPattern.update(newPattern);
 }
 
 void LightManager::chooseNewPattern() {
-	static unsigned long lastPatternChangeTime = 0;
-
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	if(currTime > lastPatternChangeTime + FORCE_PATTERN_CHANGE)
+	if(currTime > this->currPattern.startTime + FORCE_PATTERN_CHANGE)
 	{
-		this->nextPattern.pattern = random(0,LIGHT_PATTERNS_DEFINED);
+		this->nextPattern.pattern = random(0, LIGHT_PATTERNS_DEFINED);
 		this->nextPattern.pattern_param1 = this->currPattern.pattern_param1;
-		this->nextPattern.pattern_param2 = this->currPattern.pattern_param2;
-		nextPatternStartTime = singleMan->radioMan()->getAdjustedMillis() + PATTERN_CHANGE_DELAY;
-
-//Serial.println("New Pattern Change");
-
-		lastPatternChangeTime = currTime;
-	}
-	else
-	{
-		// check to see if the pattern_param should be updated...
-		#define TimeBetweenDebugPatternColorChange 1000
-		unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-
-		static unsigned long colorChoice = 0;
-		if(currTime > colorChoice + TimeBetweenDebugPatternColorChange) {
-			this->nextPattern.pattern_param1++;
-			nextPatternStartTime = singleMan->radioMan()->getAdjustedMillis() + PATTERN_CHANGE_DELAY;
-		}
-
+		this->nextPattern.startTime = currTime + PATTERN_CHANGE_DELAY;
 	}
 }
 
@@ -147,10 +101,8 @@ void LightManager::noAddressPattern() {
 
 void LightManager::checkForPatternUpdate() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	if(currTime > nextPatternStartTime) {
-		this->currPattern.pattern = this->nextPattern.pattern;
-		this->currPattern.pattern_param1 = this->nextPattern.pattern_param1;
-		this->currPattern.pattern_param2 = this->nextPattern.pattern_param2;
+	if(currTime > this->nextPattern.startTime) {
+		this->currPattern.update(this->nextPattern);
 	}
 }
 
@@ -176,8 +128,11 @@ void LightManager::debugPattern() {
 	// Over 2000ms break into 200ms sections (10 total) segments
 	byte litIndex = (currTime%(1200))/200;
 
+	// 3 segements at 1200s each
+	byte colorIndex = (currTime%(3600))/1200;
+
 	CRGB paramColor;
-	switch(this->currPattern.pattern_param1%3) {
+	switch(colorIndex) {
 		case 0: paramColor = CRGB(75,0,0); break;
 		case 1: paramColor = CRGB(0,75,0); break;
 		case 2: paramColor = CRGB(0,0,75); break;
