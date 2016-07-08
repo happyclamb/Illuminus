@@ -35,13 +35,8 @@ void setup() {
 
 	Serial.println("Setup complete");
 
-//#define INFO
 	info_println("Info Logging enabled");
-
-//#define DEBUG
 	debug_println("Debug Logging enabled");
-
-//#define TIMING
 	timing_println("Timing Logging enabled");
 }
 
@@ -106,6 +101,13 @@ void loop() {
 			serverLoop();
 		else
 			sentryLoop(forceNTPCheck);
+	}
+
+	static unsigned long lastHealthCheck = 0;
+	if(millis() > lastHealthCheck + TIME_BETWEEN_NTP_MSGS) {
+		// Every TIME_BETWEEN_NTP_MSGS lets check the health of the sentries
+		singleMan->healthMan()->checkAllSentryHealth();
+		lastHealthCheck = millis();
 	}
 
 	// Small delay to allow for states to settle down.
@@ -238,6 +240,7 @@ void sentryLoop(bool forceNTPCheck) {
 			case NTP_COORD_MESSAGE:
 				// keep sentry alive on all COORD messages
 				singleMan->healthMan()->updateSentryNTPRequestTime(address);
+
 				if(currMessage->sentryTargetID == address) {
 					info_println("NTP_COORD_MESSAGE message received");
 

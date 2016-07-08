@@ -23,9 +23,6 @@ void HealthManager::updateSentryNTPRequestTime(byte id) {
 	}
 	currSentry->last_NTP_request_start = millis();
 	currSentry->isAlive = true;
-
-	// Seems like a good time to double check that everyone is healthy
-	checkAllSentryHealth();
 }
 
 SentryHealth* HealthManager::findSentry(byte id) {
@@ -52,7 +49,7 @@ byte HealthManager::nextAvailSentryID() {
 	if(currNode == NULL)
 		return 0;
 
-	// Check health of Everything
+	// Check healths before looking for IDs
 	checkAllSentryHealth();
 
 	int nextID = 0;

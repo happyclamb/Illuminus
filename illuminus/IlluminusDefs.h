@@ -1,6 +1,10 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
+#define INFO
+#define DEBUG
+//#define TIMING
+
 #ifdef INFO
  #define info_print(x)     Serial.print(x)
  #define info_println(x)   Serial.println(x)
