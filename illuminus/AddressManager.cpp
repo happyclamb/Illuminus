@@ -8,7 +8,7 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
 {
 	// Setup the addressing pins
-	pinMode(ADDR_0_PIN, INPUT);
+	pinMode(ADDR_0_PIN, INPUT);		// #2, #6 have borked 0 pin
 	pinMode(ADDR_1_PIN, INPUT);
 
 	singleMan->setAddrMan(this);
@@ -16,8 +16,7 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 
 
 byte AddressManager::getZone() {
-	if (zoneSet == false)
-	{
+	if (zoneSet == false) {
 		zone = 0;
 		if(digitalRead(ADDR_0_PIN) == LOW)
 			zone += 1;
@@ -25,12 +24,9 @@ byte AddressManager::getZone() {
 			zone += 2;
 
 		zoneSet = true;
-Serial.println("*******************");
-Serial.print("ZONE IS REALLY::: ");
-Serial.println(zone);
-Serial.println("*******************");
 	}
-	return (1);
+
+	return (zone);
 }
 
 
@@ -46,7 +42,7 @@ void AddressManager::setAddress(byte newAddress) {
 	info_println(getZone());
 	info_print("Assigned Address: ");
 	info_println(getAddress());
-delay(5);
+	delay(5);
 }
 
 byte AddressManager::getAddress() {

@@ -1,8 +1,8 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
-#define INFO
-#define DEBUG
+//#define INFO
+//#define DEBUG
 //#define TIMING
 
 #ifdef INFO

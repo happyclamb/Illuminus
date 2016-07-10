@@ -33,7 +33,8 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER2_irq();
 
-	Serial.println("Setup complete");
+	Serial.print("Setup complete; Zone: ");
+	Serial.println(singleMan->addrMan()->getZone());
 
 	info_println("Info Logging enabled");
 	debug_println("Debug Logging enabled");
