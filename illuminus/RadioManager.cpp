@@ -4,24 +4,18 @@
 #include "RF24.h"
 
 #include "IlluminusDefs.h"
-#include "Utils.h"
+#include "SingletonManager.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
 
-RadioManager::RadioManager(uint8_t radio_ce_pin, uint8_t radio__cs_pin):
+RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
+		singleMan(_singleMan),
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
-		currentMillisOffset(0),
-		radioAddresses{ 0xF0F0F0F0AALL, 0xF0F0F0F0BBLL, 0xF0F0F0F0CCLL, 0xF0F0F0F0DDLL, 0xF0F0F0F0EELL, 0xF0F0F0F0FFLL },
-		messageQueue(NULL),
-		sentUIDs(),
-		nextSentUIDIndex(0),
-		receivedUIDs(),
-		nextReceivedUIDIndex(0),
-		informServerWhenNTPDone(false)
+		radioAddresses{ {0xF0F0F0F011LL, 0xF0F0F0F022LL},
+										{0xF0F0F0F044LL, 0xF0F0F0F055LL},
+										{0xF0F0F0F077LL, 0xF0F0F0F088LL},
+										{0xF0F0F0F0AALL, 0xF0F0F0F0BBLL} }
 {
-}
-
-void RadioManager::init() {
 	// Init Radio
 	rf24.begin();
 
@@ -45,11 +39,8 @@ void RadioManager::init() {
 
 	rf24.setPayloadSize(sizeof(RF24Message));
 
-	// Everyone is listening on [0], will broadcast on [0] and switch back after
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
-//	rf24.openReadingPipe(2, radioAddresses[1]);
-//	rf24.openReadingPipe(3, radioAddresses[2]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 
 	// kick off with listening
 	rf24.startListening();
@@ -62,25 +53,33 @@ void RadioManager::init() {
 	}
 
 	// Seed the random generator for message UID
-	randomSeed(analogRead(1));
+	analogSeed = analogRead(1);
+	randomSeed(analogSeed);
+
+	singleMan->setRadioMan(this);
 }
 
 unsigned long RadioManager::generateUID() {
 	unsigned long generatedUID = micros() << 3;
-	generatedUID |= getAddress();
+	generatedUID |= singleMan->addrMan()->getAddress();
+
 	return(generatedUID);
 }
 
 void RadioManager::setMillisOffset(long newOffset) {
-//	Serial.print("RadioManager::setMillisOffset    newOffset: ");
-//	Serial.println(newOffset);
 	currentMillisOffset = newOffset;
+	info_print("RadioManager::setMillisOffset:: ");
+	info_print(currentMillisOffset);
+	debug_print("      CurrentTime: ");
+	debug_print(millis());
+	debug_print("      AdjustedTime: ");
+	debug_print(getAdjustedMillis());
+	info_println();
 }
 
 unsigned long RadioManager::getAdjustedMillis() {
 	return millis() + currentMillisOffset;
 }
-
 
 bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 	informServerWhenNTPDone = newValue;
@@ -98,10 +97,9 @@ bool RadioManager::checkRadioForData() {
 		// If the payload is a NTP_CLIENT_REQUEST then immediately
 		//	update server_start time
 		if(newMessage->messageType == NTP_CLIENT_REQUEST)
-			newMessage->server_start = micros();
-
-//Serial.print("pushMessage: ");
-//Serial.println(newMessage->UID);
+			newMessage->server_start = millis();
+		else if(newMessage->messageType == NTP_SERVER_RESPONSE)
+				newMessage->client_end = millis();
 
 		if(pushMessage(newMessage) == false)
 			delete newMessage;
@@ -142,14 +140,15 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 	}
 	else
 	{
-		MessageNode *tail = NULL;
-		while((tail = messageQueue->next) != NULL)
-		{
-			MessageNode *newNode = new MessageNode();
-			tail->next = newNode;
-			newNode->message = newMessage;
-			newNode->next = NULL;
-		}
+		MessageNode *lastNode = messageQueue;
+
+		// find last location to insert message
+		while(lastNode->next != NULL)
+			lastNode = lastNode->next;
+
+		MessageNode *newNode = new MessageNode();
+		lastNode->next = newNode;
+		newNode->message = newMessage;
 	}
 
 	// Store this as received
@@ -161,8 +160,7 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 }
 
 // Ponder sending multiple times ??
-void RadioManager::sendMessage(RF24Message messageToSend) {
-
+void RadioManager::internalSendMessage(RF24Message messageToSend) {
 	// Mark as sent
 	bool alreadySent = false;
 	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
@@ -181,33 +179,31 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
-	rf24.openWritingPipe(radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.startListening();
 
-/*
-	// Sending on multiple pipes doesn't seem to work as well as
-	//	simply resending on same pipe
-	rf24.stopListening();
-	rf24.closeReadingPipe(2);
-	rf24.openWritingPipe(radioAddresses[1]);
-	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(2, radioAddresses[1]);
-	rf24.startListening();
-*/
 
 	// Doing one realy quick and dirty resend here after a short delay
-	delay(1);
+	delay(5);
 	rf24.stopListening();
 	rf24.closeReadingPipe(1);
-	rf24.openWritingPipe(radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.write(&messageToSend, sizeof(RF24Message));
-	rf24.openWritingPipe(radioAddresses[3]);
-	rf24.openReadingPipe(1, radioAddresses[0]);
+	rf24.openWritingPipe(radioAddresses[singleMan->addrMan()->getZone()][1]);
+	rf24.openReadingPipe(1, radioAddresses[singleMan->addrMan()->getZone()][0]);
 	rf24.startListening();
+}
+
+void RadioManager::sendMessage(RF24Message messageToSend) {
+
+		// Sending messages requires a new UID; but don't want
+		//	to change UID when echoing!
+		messageToSend.UID = generateUID();
+
+		internalSendMessage(messageToSend);
 }
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {
@@ -220,37 +216,38 @@ void RadioManager::echoMessage(RF24Message messageToEcho) {
 		}
 	}
 
-	sendMessage(messageToEcho);
+	internalSendMessage(messageToEcho);
 }
 
-void RadioManager::sendNTPRequestToServer()
-{
+NTP_state RadioManager::sendNTPRequestToServer() {
+
 	RF24Message ntpOut;
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
-	ntpOut.sentryRequestID = getAddress();
-	ntpOut.UID = generateUID();
+	ntpOut.sentrySrcID = singleMan->addrMan()->getAddress();
+	ntpOut.sentryTargetID = 0;
 	ntpOut.server_end = 0;
 	ntpOut.server_start = 0;
 	ntpOut.client_end = 0;
-	ntpOut.client_start = micros();
+	ntpOut.client_start = millis();
 
 	sendMessage(ntpOut);
+
+	return(NTP_WAITING_FOR_RESPONSE);
 }
 
-bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
+NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 	static long offsetCollection[NTP_OFFSET_SUCCESSES_REQUIRED];
-	static int currOffsetIndex = 0;
+	static byte currOffsetIndex = 0;
 
-	bool inNTPLoop = true;
+	NTP_state returnState = NTP_SEND_REQUEST;
 
 	long ntpOffset = calculateOffsetFromNTPResponseFromServer(ntpMessage);
 	if(ntpOffset != 0)
 	{
 		offsetCollection[currOffsetIndex] = ntpOffset;
 		currOffsetIndex++;
-
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
-		if(currOffsetIndex==NTP_OFFSET_SUCCESSES_REQUIRED) {
+		if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
 
 			for(int i=1;i<NTP_OFFSET_SUCCESSES_REQUIRED;++i)
 			{
@@ -276,38 +273,39 @@ bool RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 				// Tell the server that syncronization has happened.
 				RF24Message ntpClientFinished;
 				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
+				ntpClientFinished.sentrySrcID = singleMan->addrMan()->getAddress();
+				ntpClientFinished.sentryTargetID = 0;
 				ntpClientFinished.client_start = averagedOffset;
-				ntpClientFinished.sentryRequestID = getAddress();
-				ntpClientFinished.UID = generateUID();
 				sendMessage(ntpClientFinished);
 			}
 
 			// reset variables to wait for next NTP sync
 			informServerWhenNTPDone = false;
 			currOffsetIndex = 0;
-			inNTPLoop = false;
+			returnState = NTP_DONE;
 		}
 	}
 
-	return(inNTPLoop);
+	return(returnState);
 }
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
-	// Spew Debug Info
-/*
-	Serial.print("VagueTxRxTime: ");
-	Serial.print(ntpMessage.client_end - ntpMessage.client_start);
-	Serial.print("    client_start: ");
-	Serial.print(ntpMessage.client_start);
-	Serial.print("    client_end: ");
-	Serial.print(ntpMessage.client_end);
-	Serial.print("    server_start: ");
-	Serial.print(ntpMessage.server_start);
-	Serial.print("    server_end: ");
-	Serial.println(ntpMessage.server_end);
-*/
 
-	/* Finally have enough data to Do The Math
+	timing_println("***calculateOffsetFromNTPResponseFromServer ************************");
+
+	timing_print("calculateOffset --> VagueTxRxTime: ");
+	timing_print(ntpMessage->client_end - ntpMessage->client_start);
+
+	timing_print("    client_start: ");
+	timing_print(ntpMessage->client_start);
+	timing_print("    client_end: ");
+	timing_print(ntpMessage->client_end);
+	timing_print("    server_start: ");
+	timing_print(ntpMessage->server_start);
+	timing_print("    server_end: ");
+	timing_println(ntpMessage->server_end);
+
+	/* Have enough data to Do The Math
 			https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
 		offSet = ((t1 - t0) + (t2-t3)) / 2
 		halfRtripDelay = ((t3-t0) - (t2-t1)) / 2
@@ -322,6 +320,16 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
+	timing_print("t1_t0: ");
+	timing_print(t1_t0);
+	timing_print("    t2_t3: ");
+	timing_print(t2_t3);
+	timing_print("    offset_LL: ");
+	timing_print(t1_t0 + t2_t3);
+	timing_print("    offset: ");
+	timing_println(offset);
+
+
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
 	long t3_t0 = ntpMessage->client_end - ntpMessage->client_start;
 	long t2_t1 = ntpMessage->server_end - ntpMessage->server_start;
@@ -330,8 +338,14 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
-	// Need to convert from Micros to Millis
-	offset = ((offset+500)/1000);
+	timing_print("t3_t0: ");
+	timing_print(t3_t0);
+	timing_print("    t2_t1: ");
+	timing_print(t2_t1);
+	timing_print("    halfRtripDelay: ");
+	timing_print(halfRtripDelay);
+	timing_print("    offset: ");
+	timing_println(offset);
 
 	// return
 	return(offset);
@@ -341,12 +355,11 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 void RadioManager::handleNTPClientRequest(RF24Message* ntpMessage) {
 	static int getNTPRequestCount=0;
 
-	// since we're reusing the message; need to update the
-	// messageID or else echoing won't work
-	ntpMessage->UID = generateUID();
-
 	// Set the payload
 	ntpMessage->messageType = NTP_SERVER_RESPONSE;
-	ntpMessage->server_end = micros();
+	ntpMessage->sentryTargetID = ntpMessage->sentrySrcID;
+	ntpMessage->sentrySrcID = 0;
+
+	ntpMessage->server_end = millis();
 	sendMessage(*ntpMessage);
 }
