@@ -8,8 +8,8 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
 {
 	// Setup the addressing pins
-	pinMode(ADDR_0_PIN, INPUT);		// #2, #6 have borked 0 pin
-	pinMode(ADDR_1_PIN, INPUT);
+	pinMode(ZONE_0_PIN, INPUT);
+	pinMode(ZONE_1_PIN, INPUT);
 
 	singleMan->setAddrMan(this);
 }
@@ -18,9 +18,9 @@ AddressManager::AddressManager(SingletonManager* _singleMan) :
 byte AddressManager::getZone() {
 	if (zoneSet == false) {
 		zone = 0;
-		if(digitalRead(ADDR_0_PIN) == LOW)
+		if(digitalRead(ZONE_0_PIN) == LOW)
 			zone += 1;
-		if(digitalRead(ADDR_1_PIN) == LOW)
+		if(digitalRead(ZONE_1_PIN) == LOW)
 			zone += 2;
 
 		zoneSet = true;
