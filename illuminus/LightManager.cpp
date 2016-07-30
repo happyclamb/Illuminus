@@ -36,7 +36,7 @@ void LightManager::chooseNewPattern() {
 	if(currTime > this->currPattern.startTime + FORCE_PATTERN_CHANGE)
 	{
 		this->nextPattern.pattern = random(0, LIGHT_PATTERNS_DEFINED);
-		this->nextPattern.pattern_param1 = this->currPattern.pattern_param1;
+		this->nextPattern.pattern_param1 = random(1, 4);
 		this->nextPattern.startTime = currTime + PATTERN_CHANGE_DELAY;
 	}
 }
@@ -158,15 +158,16 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 	else
 		currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	// Over 255position*12ms broken into segements
-	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*COLOR_TIME_BETWEEN_WHEEL_STEPS))/COLOR_TIME_BETWEEN_WHEEL_STEPS;
+	byte colorTimeBetweenSteps = 20 * currPattern.pattern_param1;  // 1 -> 3
+
+	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
 	// Now handle the stagger between sentries.
 	byte thisSentryOffset = 0;
 	if(timingType == PATTERN_TIMING_STAGGER) {
 		byte wheelSentryPositionOffsetAmount = COLOR_STEPS_IN_WHEEL  / singleMan->healthMan()->totalSentries() ;
 		thisSentryOffset = singleMan->addrMan()->getAddress() * wheelSentryPositionOffsetAmount;
-	} else if(timingType == PATTERN_TIMING_STAGGER) {
+	} else if(timingType == PATTERN_TIMING_ALTERNATE) {
 		if(singleMan->addrMan()->getAddress()%2 == 0)
 			thisSentryOffset = 128;
 	}
