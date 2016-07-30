@@ -12,7 +12,7 @@ class SingletonManager;
 class LightPattern {
 	public:
 		byte pattern = 0;
-		byte pattern_param1 = 0;
+		byte pattern_param1 = 1;
 		unsigned long startTime = 0;
 
 		void update(LightPattern newPattern) {
