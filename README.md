@@ -1,16 +1,16 @@
-#Illuminus
+# Illuminus
 
 
-##Arduino Uploading
+## Arduino Uploading
 [Arduino Software](https://www.arduino.cc/download_handler.php)
 
-####Add Arduino 328p Board:
+#### Add Arduino 328p Board:
 
 `Tools -> Board -> Board Manager`
 
 * Atmel AVR Xplained-minis by Atmel University France version v0.3.0
 
-####Extra libraries:
+#### Extra libraries:
 	
 `Sketch -> Include Library -> Manage Libraries`
 
@@ -18,7 +18,7 @@
 * RF24 by TMRh20 Version v1.1.6
 
 
-##Coding Environment
+## Coding Environment
 
 Atom for development:
 [Atom](https://atom.io/)
