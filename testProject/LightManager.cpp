@@ -58,7 +58,7 @@ void LightManager::redrawLights() {
 void LightManager::setMicrophoneLED() {
 	// Analog input (value 0->1024)
 	int microphoneLevel = singleMan->inputMan()->getSoundLevel() / 4;
-//	info_println(microphoneLevel);
+	timing_println(microphoneLevel);
 
 	analogWrite(BIG_LED_PIN, 255);
 }

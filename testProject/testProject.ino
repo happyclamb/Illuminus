@@ -8,13 +8,10 @@
 #include "LightManager.h"
 #include "RadioManager.h"
 
-#include "button_debounce.h"
-
 SingletonManager *singleMan = NULL;
 
 
 void setup() {
-//	Serial.begin(115200);
 	Serial.begin(9600);
 
 	// Create the holder for global objects
@@ -105,7 +102,6 @@ ISR(TIMER1_OVF_vect)
 
 
 void loop() {
-
 	// Update Inputs
 	singleMan->inputMan()->updateValues();
 
@@ -114,6 +110,7 @@ void loop() {
 	// Every 3 seconds send a radio message
 	static long lastSend = 0;
 	if(millis() > lastSend + 3000) {
+
 		RF24Message testMessage;
 		testMessage.messageType = TEST_MESSAGE;
 
@@ -122,11 +119,17 @@ void loop() {
 		singleMan->lightMan()->setLastRadioSend(lastSend);
 	}
 
+	// Check for interference
+	if(singleMan->radioMan()->checkForInterference()) {
+		info_println("RF24 INTERFERENCE DETECTED");
+	}
+
 	// Poll for any new RadioData
 	singleMan->radioMan()->checkRadioForData();
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 
 	if(currMessage != NULL) {
+		info_println("RF24Message Received");
 
 		if(currMessage->messageType == TEST_MESSAGE) {
 			singleMan->lightMan()->setLastRadioReceive(millis());
@@ -134,4 +137,6 @@ void loop() {
 
 		delete currMessage;
 	}
+
+	delay(5);
 }

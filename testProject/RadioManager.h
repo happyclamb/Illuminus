@@ -41,14 +41,16 @@ class RadioManager
 
 		bool checkRadioForData();
 		RF24Message* popMessage();
-
 		void sendMessage(RF24Message messageToSend);
+
+		bool checkForInterference();
 
 	private:
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		byte radioAddresses[4][2][6];
+		uint64_t pipeAddresses[4][2];
+
 		MessageNode* messageQueue = NULL;
 		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
 		int nextSentUIDIndex = 0;
@@ -56,6 +58,7 @@ class RadioManager
 		int nextReceivedUIDIndex = 0;
 		int analogSeed = 0;
 
+		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);
 		bool pushMessage(RF24Message* newMessage);
 };
