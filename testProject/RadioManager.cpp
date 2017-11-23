@@ -100,8 +100,9 @@ void RadioManager::resetRadio() {
 		// void 	enableDynamicAck ()
 		// void 	enableAckPayload (void)
 
-		rf24.openWritingPipe(pipeAddresses[0][1]);
-		rf24.openReadingPipe(1, pipeAddresses[0][0]);
+		byte currentZone = singleMan->addrMan()->getZone();
+		rf24.openWritingPipe(pipeAddresses[currentZone][1]);
+		rf24.openReadingPipe(1, pipeAddresses[currentZone][0]);
 
 		// kick off with listening
 		rf24.startListening();
@@ -234,16 +235,18 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 		if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 			nextSentUIDIndex = 0;
 
+		byte currentZone = singleMan->addrMan()->getZone();
+
 		rf24.stopListening();
 
 		rf24.closeReadingPipe(1);
-		rf24.openWritingPipe(pipeAddresses[0][0]);
+		rf24.openWritingPipe(pipeAddresses[currentZone][0]);
 
 		rf24.write(&messageToSend, sizeof(RF24Message));
 		rf24.flush_tx();
 
-		rf24.openWritingPipe(pipeAddresses[0][1]);
-		rf24.openReadingPipe(1, pipeAddresses[0][0]);
+		rf24.openWritingPipe(pipeAddresses[currentZone][1]);
+		rf24.openReadingPipe(1, pipeAddresses[currentZone][0]);
 
 		rf24.startListening();
 	}
