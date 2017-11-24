@@ -109,7 +109,9 @@ void loop() {
 
 	// Every 3 seconds send a radio message
 	static long lastSend = 0;
-	if(millis() > lastSend + 3000) {
+	long sendOffset = (singleMan->addrMan()->getZone() + 2)*1000;
+
+	if(millis() > (lastSend + sendOffset)) {
 
 		RF24Message testMessage;
 		testMessage.messageType = TEST_MESSAGE;
@@ -129,8 +131,6 @@ void loop() {
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 
 	if(currMessage != NULL) {
-		info_println("RF24Message Received");
-
 		if(currMessage->messageType == TEST_MESSAGE) {
 			singleMan->lightMan()->setLastRadioReceive(millis());
 		}

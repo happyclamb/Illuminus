@@ -140,8 +140,6 @@ bool RadioManager::checkRadioForData() {
 	} else {
 		if(rf24.available())
 		{
-			info_println("DATA RECEIVED");
-
 			RF24Message *newMessage = new RF24Message();
 			rf24.read(newMessage, sizeof(RF24Message));
 
