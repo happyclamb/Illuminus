@@ -18,6 +18,7 @@ class InputManager
 		bool isMotionDetected() { return this->motionLevel > 255; }
 		int getLightLevel() { return this->lightLevel; }
 		int getSoundLevel() { return this->soundLevel; }
+		byte getZoneInput() { return this->zoneInput; }
 
 	private:
 		SingletonManager* singleMan = NULL;
@@ -26,6 +27,7 @@ class InputManager
 		int motionLevel = 0;
 		int lightLevel = 0;
 		int soundLevel = 0;
+		byte zoneInput = 0;
 };
 
 #endif // __INPUTMANAGER_H__

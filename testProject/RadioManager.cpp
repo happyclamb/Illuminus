@@ -20,6 +20,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 	// initialize RF24 printf library
 	printf_begin();
 
+	// initialize RF24 radio
 	resetRadio();
 
 	// init the sentUIDs array
@@ -203,19 +204,13 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 }
 
 void RadioManager::sendMessage(RF24Message messageToSend) {
-	if(rf24.failureDetected) {
-		info_println("RADIO ERROR DETECTED ON SEND, resetting");
-		resetRadio();
-	} else {
-		// Sending messages requires a new UID; but don't want
-		//	to change UID when echoing!
-		messageToSend.UID = generateUID();
+	// Sending messages requires a new UID; but don't want
+	//	to change UID when echoing!
+	messageToSend.UID = generateUID();
 
-		internalSendMessage(messageToSend);
-	}
+	internalSendMessage(messageToSend);
 }
 
-// Ponder sending multiple times ??
 void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 	// Mark as sent
@@ -229,6 +224,13 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 	// Store this as sent
 	if(alreadySent == false) {
+
+		// Check for hardware failure, reset radio - then send message
+		if(rf24.failureDetected) {
+			info_println("RADIO ERROR DETECTED ON SEND, resetting");
+			resetRadio();
+		}
+
 		sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
 		if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 			nextSentUIDIndex = 0;

@@ -14,12 +14,12 @@ class SingletonManager;
 class RF24Message
 {
 	public:
-		byte messageType = 0; // byte
+		byte messageType = 0; // 1 byte
 		unsigned long UID = 0; // 4 bytes
 
-		byte byteParam1 = 0; // byte
-		byte byteParam2 = 0; // byte
-		byte byteParam3 = 0; // byte
+		byte byteParam1 = 0; // 1 byte
+		byte byteParam2 = 0; // 1 byte
+		byte byteParam3 = 0; // 1 byte
 };
 
 enum Radio_Message_Type {
@@ -41,9 +41,9 @@ class RadioManager
 
 		bool checkRadioForData();
 		RF24Message* popMessage();
-		void sendMessage(RF24Message messageToSend);
-
 		bool checkForInterference();
+
+		void sendMessage(RF24Message messageToSend);
 
 	private:
 		SingletonManager* singleMan;
