@@ -7,28 +7,13 @@
 AddressManager::AddressManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
 {
-	// Setup the addressing pins
-	pinMode(ZONE_0_PIN, INPUT);
-	pinMode(ZONE_1_PIN, INPUT);
-
 	singleMan->setAddrMan(this);
 }
 
 
 byte AddressManager::getZone() {
-	if (zoneSet == false) {
-		zone = 0;
-		if(digitalRead(ZONE_0_PIN) == LOW)
-			zone += 1;
-		if(digitalRead(ZONE_1_PIN) == LOW)
-			zone += 2;
-
-		zoneSet = true;
-	}
-
-	return (zone);
+	return this->singleMan->inputMan()->getZoneInput();
 }
-
 
 bool AddressManager::hasAddress() {
 	return addressSet;
@@ -69,8 +54,6 @@ void AddressManager::sendAddressRequest() {
 
 			currMessage = singleMan->radioMan()->popMessage();
 		}
-
-		delay(5);
 	}
 }
 
@@ -80,6 +63,7 @@ void AddressManager::obtainAddress() {
 		info_print("Attempt to get address: ");
 		info_println(i);
 		delay(5);
+
 		sendAddressRequest();
 		if(hasAddress())
 			break;

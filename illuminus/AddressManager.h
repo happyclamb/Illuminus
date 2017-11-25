@@ -17,6 +17,7 @@ class AddressManager
 		bool hasAddress();
 		byte getAddress();
 		void setAddress(byte newAddress);
+
 		void obtainAddress();
 		void sendNewAddressResponse();
 
@@ -24,8 +25,6 @@ class AddressManager
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
 		byte address = 255;
-		bool zoneSet = false;
-		byte zone = 0;
 
 		void sendAddressRequest();
 };

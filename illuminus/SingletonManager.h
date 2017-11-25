@@ -1,14 +1,17 @@
 #ifndef __SINGLETONMANAGER_H__
 #define __SINGLETONMANAGER_H__
 
-#include "RadioManager.h"
-class RadioManager;
+#include "InputManager.h"
+class InputManager;
+
+#include "AddressManager.h"
+class AddressManager;
 
 #include "LightManager.h"
 class LightManager;
 
-#include "AddressManager.h"
-class AddressManager;
+#include "RadioManager.h"
+class RadioManager;
 
 #include "HealthManager.h"
 class HealthManager;
@@ -18,22 +21,26 @@ class SingletonManager
 	public:
 		SingletonManager() {}
 
-		RadioManager* radioMan() { return radioManager; }
-		void setRadioMan(RadioManager* _radioMan) { radioManager = _radioMan; }
+		InputManager* inputMan() { return inputManager; }
+		void setInputMan(InputManager* _inputMan) { inputManager = _inputMan; }
+
+		AddressManager* addrMan()  { return addrManager; }
+		void setAddrMan(AddressManager* _addrMan) { addrManager = _addrMan; }
 
 		LightManager* lightMan() { return lightManager; }
 		void setLightMan(LightManager* _lightMan) { lightManager = _lightMan; }
 
-		AddressManager* addrMan()  { return addrManager; }
-		void setAddrMan(AddressManager* _addrMan) { addrManager = _addrMan; }
+		RadioManager* radioMan() { return radioManager; }
+		void setRadioMan(RadioManager* _radioMan) { radioManager = _radioMan; }
 
 		HealthManager* healthMan()  { return healthManager; }
 		void setHealthMan(HealthManager* _healthMan) { healthManager = _healthMan; }
 
 	private:
-		RadioManager* radioManager = NULL;
-		LightManager* lightManager = NULL;
+		InputManager* inputManager = NULL;
 		AddressManager* addrManager = NULL;
+		LightManager* lightManager = NULL;
+		RadioManager* radioManager = NULL;
 		HealthManager* healthManager = NULL;
 };
 

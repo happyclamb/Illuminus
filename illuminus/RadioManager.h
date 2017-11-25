@@ -9,18 +9,20 @@
 #include "SingletonManager.h"
 class SingletonManager;
 
+#define MAX_STORED_MSG_IDS 64
+
 class RF24Message
 {
 	public:
-		byte messageType = 0; // byte
+		byte messageType = 0; // 1 byte
 		unsigned long UID = 0; // 4 bytes
 
-		byte sentrySrcID = 0; // byte
-		byte sentryTargetID = 0; // byte
+		byte sentrySrcID = 0; // 1 byte
+		byte sentryTargetID = 0; // 1 byte
 
-		byte byteParam1 = 0; // byte
-		byte byteParam2 = 0; // byte
-		byte byteParam3 = 0; // byte
+		byte byteParam1 = 0; // 1 byte
+		byte byteParam2 = 0; // 1 byte
+		byte byteParam3 = 0; // 1 byte
 
 		unsigned long client_start = 0; // 4 bytes
 		unsigned long client_end = 0; // 4 bytes
@@ -58,12 +60,14 @@ class RadioManager
 		unsigned long getAdjustedMillis();
 		void setMillisOffset(long newOffset);
 
-		bool setInformServerWhenNTPDone(bool newValue);
 		bool checkRadioForData();
 		RF24Message* popMessage();
+		bool checkForInterference();
 
 		void sendMessage(RF24Message messageToSend);
 		void echoMessage(RF24Message messageToEcho);
+
+		bool setInformServerWhenNTPDone(bool newValue);
 		NTP_state sendNTPRequestToServer();
 		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
 		void handleNTPClientRequest(RF24Message* ntpMessage);
@@ -72,17 +76,20 @@ class RadioManager
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		byte radioAddresses[4][2][6];
+		uint64_t pipeAddresses[4][2];
+
 		MessageNode* messageQueue = NULL;
 		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
 		int nextSentUIDIndex = 0;
 		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
 		int nextReceivedUIDIndex = 0;
-		bool informServerWhenNTPDone = true;
 		int analogSeed = 0;
+		bool informServerWhenNTPDone = true;
 
+		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);
 		bool pushMessage(RF24Message* newMessage);
+
 		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 };
 
