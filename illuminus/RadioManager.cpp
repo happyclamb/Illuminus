@@ -282,15 +282,22 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 
 void RadioManager::echoMessage(RF24Message messageToEcho) {
 
-	// Only care about checking for resending as
-	//	we *do* want to echo received messages
-	for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
-		if(sentUIDs[i] == messageToEcho.UID) {
-			return;
-		}
-	}
+	byte address = singleMan->addrMan()->getAddress();
 
-	internalSendMessage(messageToEcho);
+	// Only echo the message if current sentry isn't 'upstream'
+	if((messageToEcho.sentrySrcID < messageToEcho.sentryTargetID && address < messageToEcho.sentryTargetID) ||
+		(messageToEcho.sentryTargetID < messageToEcho.sentrySrcID && address < messageToEcho.sentrySrcID) ||
+		(messageToEcho.sentryTargetID == 255 || messageToEcho.sentrySrcID == 255)) {
+
+			// Only care about checking for resending as we *do* want to echo received messages
+			for(int i=0; i<MAX_STORED_MSG_IDS; i++) {
+				if(sentUIDs[i] == messageToEcho.UID) {
+					return;
+				}
+			}
+
+			internalSendMessage(messageToEcho);
+		}
 }
 
 NTP_state RadioManager::sendNTPRequestToServer() {

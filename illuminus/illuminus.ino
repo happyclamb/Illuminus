@@ -13,7 +13,7 @@ SingletonManager *singleMan = NULL;
 
 void setup() {
 	Serial.begin(9600);
-  
+
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
 
@@ -157,13 +157,17 @@ void serverLoop() {
 			case NTP_CLIENT_REQUEST:
 				singleMan->radioMan()->handleNTPClientRequest(currMessage);
 				break;
+			case COLOR_MESSAGE_FROM_SENTRY:
+				// Going to do something magic with response ??
+				// Maybe something about marking it as known value and resend if not set ?
+				break;
 			case NTP_CLIENT_FINISHED:
 				// spamming NTP requests will flood the system; so only
 				// do the NTPCheck skipping for first run through of the sentries.
-				if(bootNTPSequence)
-				{
+				if(bootNTPSequence) {
 					// successfully finished current NTP, force jump to next sentry
-					lastNTPCheck = millis() - TIME_BETWEEN_NTP_MSGS - 10;
+					//	by making the time well before the next check
+					lastNTPCheck = millis() - TIME_BETWEEN_NTP_MSGS - 100;
 				}
 				break;
 		}
@@ -218,7 +222,7 @@ void serverLoop() {
 
 		// send color updates
 		RF24Message lightMessage;
-		lightMessage.messageType = COLOR_MESSAGE;
+		lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
 		lightMessage.sentrySrcID = 0;
 		lightMessage.sentryTargetID = 255;
 		lightMessage.byteParam1 = nextPattern.pattern;
@@ -286,7 +290,7 @@ void sentryLoop(bool forceNTPCheck) {
 				}
 				break;
 
-			case COLOR_MESSAGE:
+			case COLOR_MESSAGE_TO_SENTRY:
 				LightPattern newPattern;
 				newPattern.pattern = currMessage->byteParam1;
 				newPattern.pattern_param1 = currMessage->byteParam2;
@@ -295,9 +299,17 @@ void sentryLoop(bool forceNTPCheck) {
 				// update pattern for LEDs since the interrupt will do the painting
 				singleMan->lightMan()->setNextPattern(newPattern);
 
-				info_print("COLOR_MESSAGE message received.  Next pattern is:");
+				info_print("COLOR_MESSAGE_TO_SENTRY message received.  Next pattern is:");
 				newPattern.printPattern();
 				info_println();
+
+				// Send a response back to Server
+				RF24Message responseMessage;
+				responseMessage.messageType = COLOR_MESSAGE_FROM_SENTRY;
+				responseMessage.sentryTargetID = 0;
+				responseMessage.sentrySrcID = singleMan->addrMan()->getAddress();
+				singleMan->radioMan()->sendMessage(responseMessage);
+
 				break;
 		}
 

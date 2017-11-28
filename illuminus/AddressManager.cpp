@@ -44,6 +44,7 @@ void AddressManager::sendAddressRequest() {
 
 	unsigned long requestStart = millis();
 	while(hasAddress() == false && millis() < (requestStart + 2000)) {
+		delay(5); // Give the radio a moment to wait for a message
 		singleMan->radioMan()->checkRadioForData();
 		RF24Message *currMessage = singleMan->radioMan()->popMessage();
 		while(currMessage != NULL) {
@@ -52,7 +53,10 @@ void AddressManager::sendAddressRequest() {
 			}
 			delete currMessage;
 
-			currMessage = singleMan->radioMan()->popMessage();
+			if(hasAddress() == false)
+				currMessage = singleMan->radioMan()->popMessage();
+			else
+				currMessage = NULL;
 		}
 	}
 }
@@ -72,7 +76,8 @@ void AddressManager::obtainAddress() {
 		delay(100);
 	}
 
-	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then there is no one else so become server
+	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then
+	//	there is no one else so become server
 	if(hasAddress() == false) {
 		setAddress(0);
 	}
