@@ -39,9 +39,10 @@ class RadioManager
 
 		unsigned long generateUID();
 
-		bool checkRadioForData();
 		RF24Message* popMessage();
 		bool checkForInterference();
+
+		void interruptHandler();
 
 		void sendMessage(RF24Message messageToSend);
 

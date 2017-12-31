@@ -38,12 +38,15 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 }
 
 void RadioManager::resetRadio() {
+
 	// Init Radio
 	if(rf24.begin() == false)	{
 		info_println("RADIO INITIALIZE FAILURE");
 	} else {
-		info_println("RADIO DETAILS BEFORE RESET");
-		rf24.printDetails();
+		#ifdef DEBUG
+			info_println("RADIO DETAILS BEFORE RESET");
+			rf24.printDetails();
+		#endif
 
 		// Reset Failure; Edit RF24_config.h to enable
 		// C:\Users\clamb\Documents\Arduino\libraries\RF24\RF24_config.h
@@ -110,8 +113,10 @@ void RadioManager::resetRadio() {
 
 		// https://forum.arduino.cc/index.php?topic=215065.0
 		// http://forum.arduino.cc/index.php?topic=216306.0
-		info_println("RADIO DETAILS AFTER RESET");
-		rf24.printDetails();
+		#ifdef DEBUG
+			info_println("RADIO DETAILS AFTER RESET");
+			rf24.printDetails();
+		#endif
 	}
 }
 
@@ -124,6 +129,35 @@ bool RadioManager::checkForInterference() {
 	return returnVal;
 }
 
+void RadioManager::interruptHandler() {
+	bool tx_ok = false;
+	bool tx_fail = false;
+	bool rx_ready = false;
+	rf24.whatHappened(tx_ok, tx_fail, rx_ready);
+
+	// Successful transmitted
+	if (tx_ok) {
+		debug_println("tx_ok:true");
+	}
+
+	// Transmit fail
+	if (tx_fail) {
+		info_println("tx_fail:true");
+	}
+
+	// Messages available
+	if (rx_ready) {
+		debug_println("rx_ready:true");
+
+		RF24Message *newMessage = new RF24Message();
+		rf24.read(newMessage, sizeof(RF24Message));
+
+		// can't push so free memory, otherwise message queue handles memory
+		if(pushMessage(newMessage) == false)
+			delete newMessage;
+	}
+}
+
 unsigned long RadioManager::generateUID() {
 	unsigned long generatedUID = micros() << 3;
 	generatedUID |= singleMan->addrMan()->getZone();
@@ -131,31 +165,10 @@ unsigned long RadioManager::generateUID() {
 	return(generatedUID);
 }
 
-// continually polls for available data, and when found pushes
-//	to the queue and then breaks to notify.
-bool RadioManager::checkRadioForData() {
-
-	if(rf24.failureDetected) {
-		info_println("RADIO ERROR DETECTED ON RECEIVE, resetting");
-		resetRadio();
-	} else {
-		if(rf24.available())
-		{
-			RF24Message *newMessage = new RF24Message();
-			rf24.read(newMessage, sizeof(RF24Message));
-
-			if(pushMessage(newMessage) == false)
-				delete newMessage;
-		}
-	}
-
-	return (messageQueue == NULL);
-}
 
 RF24Message* RadioManager::popMessage() {
 	RF24Message* returnMessage = NULL;
-	if(messageQueue != NULL)
-	{
+	if(messageQueue != NULL) {
 		returnMessage = messageQueue->message;
 		MessageNode *newHead = messageQueue->next;
 		delete messageQueue;

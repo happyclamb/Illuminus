@@ -86,17 +86,28 @@ void init_TIMER1_irq()
 	timer1_counter = 53035;
 	TCNT1 = timer1_counter;
 
+	// setup checkRadio interrupts
+	// modes:
+		// OK?  LOW to trigger the interrupt whenever the pin is low,
+		// BAD- CHANGE to trigger the interrupt whenever the pin changes value
+		// BAD- RISING to trigger when the pin goes from low to high,
+		// *FALLING for when the pin goes from high to low.
+	attachInterrupt(digitalPinToInterrupt(RADIO_INT_PIN), radioInterruptHandler, FALLING);
+
 	// enable all interrupts now that things are ready to go
 	interrupts();
 }
 
 // interrupt service routine for
-ISR(TIMER1_OVF_vect)
-{
+ISR(TIMER1_OVF_vect) {
 	singleMan->lightMan()->redrawLights();
 
 	// load timer last to maximize time until next call
 	TCNT1 = timer1_counter;
+}
+
+void radioInterruptHandler(void) {
+	singleMan->radioMan()->interruptHandler();
 }
 
 
@@ -125,10 +136,8 @@ void loop() {
 		info_println("RF24 INTERFERENCE DETECTED");
 	}
 
-	// Poll for any new RadioData
-	singleMan->radioMan()->checkRadioForData();
+	// Handle any new RadioData received
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
-
 	if(currMessage != NULL) {
 		if(currMessage->messageType == TEST_MESSAGE) {
 			singleMan->lightMan()->setLastRadioReceive(millis());
@@ -137,5 +146,5 @@ void loop() {
 		delete currMessage;
 	}
 
-	delay(5);
+	delay(100);
 }
