@@ -44,15 +44,16 @@ void LightManager::chooseNewPattern() {
 //*********
 //*********  ColorManipulation Utils *******
 //*********
-CRGB LightManager::colorFromWheelPosition(byte wheelPos)
+CRGB LightManager::colorFromWheelPosition(byte wheelPos, float brightness)
 {
 	byte r=0;
 	byte g=0;
 	byte b=0;
-	colorFromWheelPosition(wheelPos, &r, &g, &b);
+	colorFromWheelPosition(wheelPos, &r, &g, &b, brightness);
 	return CRGB(r, g, b);
 }
-void LightManager::colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b)
+void LightManager::colorFromWheelPosition(byte wheelPos,
+	byte *r, byte *g, byte *b, float brightness)
 {
 	if (wheelPos < 85) {
 		// 0-->85
@@ -72,6 +73,10 @@ void LightManager::colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte 
 		*g = wheelPos * 3;
 		*b = 255 - wheelPos * 3;
 	}
+
+	*r = (brightness * (float)*r);
+	*g = (brightness * (float)*g);
+	*b = (brightness * (float)*b);
 }
 
 //*********
@@ -109,14 +114,23 @@ void LightManager::checkForPatternUpdate() {
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
 	switch(this->currPattern.pattern) {
-		case 0: solidWheelColorChange(PATTERN_TIMING_NONE, true); break;
-		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, true); break;
-		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, true); break;
-		case 3: solidWheelColorChange(PATTERN_TIMING_SYNC, true); break;
-//		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, false); break;
-//		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, false); break;
-//		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, false); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_SYNC, false); break;
+		case 0: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern.pattern_param1,
+			5*(currPattern.pattern_param1 - 1), true); break;
+		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern.pattern_param1,
+			5*(currPattern.pattern_param1 - 1), true); break;
+		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern.pattern_param1,
+			5*(currPattern.pattern_param1 - 1), true); break;
+		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern.pattern_param1,
+			5*(currPattern.pattern_param1 - 1), true); break;
+//		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern.pattern_param1,
+//			false); break;
+//		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern.pattern_param1,
+//			false); break;
+//		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern.pattern_param1,
+//			false); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern.pattern_param1,
+			5*(currPattern.pattern_param1 - 1), false); break;
+
 		case 5: comet(); break;
 		case 6: debugPattern(); break;
 	}
@@ -151,15 +165,35 @@ void LightManager::debugPattern() {
 //	if (allLaternLEDs) then make all 6 LEDs the same
 // MATH: cycle through all 255 wheel positions over ~3sec
 // == 3000/255 == 11.7 ... make a step 12ms == 12*255 == 3060
-void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs) {
+void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
+	int patternSpeed, int brightnessSpeed, bool allLaternLEDs) {
 	unsigned long currTime = 0;
 	if(timingType == PATTERN_TIMING_NONE)
 		currTime = millis();
 	else
 		currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	byte colorTimeBetweenSteps = 20 * currPattern.pattern_param1;  // 1 -> 3
+	/*	brightnessFade */
+	float cosBright = 1.0;
+	if(brightnessSpeed > 0) {
+			/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
+			cos(0) == 1
+			cos(3.14) == -1
+			cos(6.28) == 1
+			*/
+		int totalBrightSteps = 314;
+		int brightnessAngleIndex = (currTime%(totalBrightSteps*brightnessSpeed))/brightnessSpeed;
+		cosBright = cos(brightnessAngleIndex/50.0) + 1.0;
 
+		// Now the range is from 0.0 -> 2.0
+		// Lets scale it
+		//	0.33 -> 1.0    cosBright/3.0 + 0.33
+		//	0.25 -> 1.0    cosBright/2.6 + 0.25
+		//	0.20 -> 1.0    cosBright/2.5 + 0.20
+		cosBright = cosBright/2.5 + 0.20;
+	}
+
+	byte colorTimeBetweenSteps = patternSpeed;
 	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
 	// Now handle the stagger between sentries.
@@ -172,14 +206,14 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType, b
 			thisSentryOffset = 128;
 	}
 
-	//	CRGB wheelColor = colorFromWheelPosition(wheelPos+thisSentryOffset);
 	byte baseWheel = wheelPos+thisSentryOffset;
 	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / NUM_RGB_LEDS;
 	for(int i=0; i<NUM_RGB_LEDS; i++) {
 		byte nextStep = baseWheel;
 		if(allLaternLEDs == false)
 			nextStep += (offsetForLanternLeds/2) + (i*offsetForLanternLeds);
-		ledstrip[i] = colorFromWheelPosition(nextStep);
+
+		ledstrip[i] = colorFromWheelPosition(nextStep, cosBright);
 	}
 }
 

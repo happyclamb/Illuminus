@@ -53,14 +53,15 @@ class LightManager {
 		LightPattern currPattern;
 		LightPattern nextPattern;
 
-		CRGB colorFromWheelPosition(byte wheelPos);
-		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b);
+		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
+		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);
 
 		void checkForPatternUpdate();
 		void noAddressPattern();
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
-		void solidWheelColorChange(LightPatternTimingOptions timingType, bool allLaternLEDs);
+		void solidWheelColorChange(LightPatternTimingOptions timingType,
+			int patternSpeed, int brightnessSpeed, bool allLaternLEDs);
 		void comet();
 };
 
