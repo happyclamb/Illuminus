@@ -43,8 +43,8 @@ void AddressManager::sendAddressRequest() {
 	singleMan->radioMan()->sendMessage(addressRequestMessage);
 
 	unsigned long requestStart = millis();
-	while(hasAddress() == false && millis() < (requestStart + 2000)) {
-		delay(5); // Give the radio a moment to wait for a message
+	while(hasAddress() == false && millis() < (requestStart + 3000)) {
+		delay(25); // Give the radio a moment to wait for a message
 		singleMan->radioMan()->checkRadioForData();
 		RF24Message *currMessage = singleMan->radioMan()->popMessage();
 		while(currMessage != NULL) {
@@ -89,7 +89,7 @@ void AddressManager::sendNewAddressResponse() {
 	RF24Message addressResponseMessage;
 	addressResponseMessage.messageType = NEW_ADDRESS_RESPONSE;
 	addressResponseMessage.sentrySrcID = 0;
-	addressResponseMessage.sentryTargetID = targetSentry;
+	addressResponseMessage.sentryTargetID = 255;
 	addressResponseMessage.byteParam1 = targetSentry;
 
 	singleMan->radioMan()->sendMessage(addressResponseMessage);

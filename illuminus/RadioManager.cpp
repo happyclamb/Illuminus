@@ -3,7 +3,6 @@
 #include <SPI.h>
 #include "nRF24L01.h"
 #include "RF24.h"
-#include "printf.h"
 
 #include "IlluminusDefs.h"
 #include "SingletonManager.h"
@@ -17,9 +16,6 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 		               { 0xCDABCDAB71LL, 0xCDABCDABC1LL },
 		               { 0xDABCDABC71LL, 0xDABCDABCC1LL } }
 {
-	// initialize RF24 printf library
-	printf_begin();
-
 	// initialize RF24 radio
 	resetRadio();
 
@@ -42,8 +38,6 @@ void RadioManager::resetRadio() {
 	if(rf24.begin() == false)	{
 		info_println("RADIO INITIALIZE FAILURE");
 	} else {
-		info_println("RADIO DETAILS BEFORE RESET");
-		rf24.printDetails();
 
 		// Reset Failure; Edit RF24_config.h to enable
 		// C:\Users\clamb\Documents\Arduino\libraries\RF24\RF24_config.h
@@ -110,8 +104,6 @@ void RadioManager::resetRadio() {
 
 		// https://forum.arduino.cc/index.php?topic=215065.0
 		// http://forum.arduino.cc/index.php?topic=216306.0
-		info_println("RADIO DETAILS AFTER RESET");
-		rf24.printDetails();
 	}
 }
 
@@ -155,7 +147,7 @@ bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 bool RadioManager::checkRadioForData() {
 
 	if(rf24.failureDetected) {
-		info_println("RADIO ERROR DETECTED ON RECEIVE, resetting");
+		info_println("RADIO ERROR On Check, resetting");
 		resetRadio();
 	} else {
 		if(rf24.available()) {
@@ -168,6 +160,9 @@ bool RadioManager::checkRadioForData() {
 				newMessage->server_start = millis();
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->client_end = millis();
+
+			info_print("checkRadioForData:true || message_type:");
+			info_println(newMessage->messageType);
 
 			if(pushMessage(newMessage) == false)
 				delete newMessage;
@@ -245,7 +240,7 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 		// Check for hardware failure, reset radio - then send message
 		if(rf24.failureDetected) {
-			info_println("RADIO ERROR DETECTED ON SEND, resetting");
+			info_println("RADIO ERROR On Send, resetting");
 			resetRadio();
 		}
 
