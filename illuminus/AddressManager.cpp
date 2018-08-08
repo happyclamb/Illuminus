@@ -44,9 +44,9 @@ void AddressManager::sendAddressRequest() {
 
 	unsigned long requestStart = millis();
 	while(hasAddress() == false && millis() < (requestStart + 3000)) {
-		delay(25); // Give the radio a moment to wait for a message
+		delay(20); // Give the radio a moment to wait for a message
 		singleMan->radioMan()->checkRadioForData();
-		RF24Message *currMessage = singleMan->radioMan()->popMessage();
+		RF24Message* currMessage = singleMan->radioMan()->popMessage();
 		while(currMessage != NULL) {
 			if(currMessage->messageType == NEW_ADDRESS_RESPONSE) {
 				setAddress(currMessage->byteParam1);
@@ -73,7 +73,7 @@ void AddressManager::obtainAddress() {
 			break;
 
 		// Need to wait long enough for messages to get processed
-		delay(100);
+		delay(200);
 	}
 
 	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then

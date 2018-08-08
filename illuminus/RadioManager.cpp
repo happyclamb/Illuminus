@@ -142,8 +142,7 @@ bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 	informServerWhenNTPDone = newValue;
 }
 
-// continually polls for available data, and when found pushes
-//	to the queue and then breaks to notify.
+// polls for available data, and if found pushes to the queue
 bool RadioManager::checkRadioForData() {
 
 	if(rf24.failureDetected) {

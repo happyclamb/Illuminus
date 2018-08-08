@@ -102,15 +102,17 @@ ISR(TIMER1_OVF_vect)
 }
 
 void loop() {
+
 	// Update Inputs
 	singleMan->inputMan()->updateValues();
 
 	// LED control is handled by interrupt on timer1
-
 	bool forceNTPCheck = false;
+
 	if(singleMan->addrMan()->hasAddress() == false) {
+
 		// The light automically goes into flashing blue mode while no address found
-		// Send off a blocking request for a new address
+		// Send off a BLOCKING request for a new address
 		singleMan->addrMan()->obtainAddress();
 
 		// First time through, start with a request for an NTP check
@@ -120,13 +122,13 @@ void loop() {
 		// If this was a sentry, add all its children to the healthMan
 		for(byte i=0; i <= singleMan->addrMan()->getAddress(); i++)
 			singleMan->healthMan()->updateSentryNTPRequestTime(i);
-	}	else {
-		// Now handle sentry or server loop
-		if (singleMan->addrMan()->getAddress() == 0)
-			serverLoop();
-		else
-			sentryLoop(forceNTPCheck);
 	}
+
+	// Now handle sentry or server loop
+	if (singleMan->addrMan()->getAddress() == 0)
+		serverLoop();
+	else
+		sentryLoop(forceNTPCheck);
 
 	static unsigned long lastHealthCheck = 0;
 	if(millis() > lastHealthCheck + TIME_BETWEEN_NTP_MSGS) {
@@ -134,6 +136,9 @@ void loop() {
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
 	}
+
+	// Give a small break before looking messages
+	delay(20);
 }
 
 
@@ -192,6 +197,7 @@ void serverLoop() {
 			ntpStartMessage.messageType = NTP_COORD_MESSAGE;
 			ntpStartMessage.sentrySrcID = 0;
 			ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
+
 			// only request response if it'll be used (aka: during boot sequence)
 			ntpStartMessage.byteParam1 = bootNTPSequence ? 1 : 0;
 
