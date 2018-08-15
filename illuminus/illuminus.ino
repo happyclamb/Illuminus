@@ -38,12 +38,12 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER1_irq();
 
-	Serial.print("Setup complete; Zone: ");
-	Serial.println(singleMan->addrMan()->getZone());
-
 	info_println("Info Logging enabled");
 	debug_println("Debug Logging enabled");
 	timing_println("Timing Logging enabled");
+
+	info_print("Setup complete; Zone: ");
+	info_println(singleMan->addrMan()->getZone());
 }
 
 // initialize timer1 to redraw the LED strip and BigLight
@@ -101,6 +101,7 @@ ISR(TIMER1_OVF_vect)
 	TCNT1 = timer1_counter;
 }
 
+
 void loop() {
 
 	// Update Inputs
@@ -138,7 +139,7 @@ void loop() {
 	}
 
 	// Give a small break before looking messages
-	delay(20);
+	delay(5);
 }
 
 

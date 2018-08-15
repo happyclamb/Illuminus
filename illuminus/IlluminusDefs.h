@@ -41,6 +41,7 @@ const unsigned long TIME_BETWEEN_LED_MSGS = 500;
 #define COLOR_STEPS_IN_WHEEL 255
 #define LIGHT_PATTERNS_DEFINED 5
 #define NUM_RGB_LEDS 6
+#define MAX_CLI_INPUT 50
 
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging

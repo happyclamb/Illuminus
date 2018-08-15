@@ -41,6 +41,8 @@ class LightManager {
 	public:
 		LightManager(SingletonManager* _singleMan);
 
+		void setBigLightBrightness(byte brightness);
+
 		LightPattern getNextPattern();
 		void setNextPattern(LightPattern newPattern);
 

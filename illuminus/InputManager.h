@@ -28,6 +28,9 @@ class InputManager
 		int lightLevel = 0;
 		int soundLevel = 0;
 		byte zoneInput = 0;
+
+		void process_data (const char * data);
+		void processIncomingByte(const byte inByte);
 };
 
 #endif // __INPUTMANAGER_H__

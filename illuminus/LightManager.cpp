@@ -17,12 +17,13 @@ LightManager::LightManager(SingletonManager* _singleMan):
 
 	// Turn on the big LED at 100%
 	pinMode(BIG_LED_PIN, OUTPUT);
-	byte bigLEDBrightness = 255 * 1.00;
-	analogWrite(BIG_LED_PIN, bigLEDBrightness);
-
+	setBigLightBrightness(255);
 	singleMan->setLightMan(this);
 }
 
+void LightManager::setBigLightBrightness(byte brightness) {
+	analogWrite(BIG_LED_PIN, brightness);
+}
 
 LightPattern LightManager::getNextPattern() {
 	return(this->nextPattern);
