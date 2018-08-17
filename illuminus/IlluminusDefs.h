@@ -29,19 +29,14 @@
  #define timing_println(x)
 #endif
 
-const unsigned long TIME_BETWEEN_NTP_MSGS = 5000;
-const unsigned long TIME_BETWEEN_LED_MSGS = 500;
-#define NEW_ADDRESS_RETRIES 4
+const unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
+const unsigned long TIME_BETWEEN_LED_MSGS = 1000;
+#define NEW_ADDRESS_RETRIES 3
 
 #define NTP_OFFSET_SUCCESSES_REQUIRED 7
 #define NTP_OFFSET_SUCCESSES_USED 3
 
-#define FORCE_PATTERN_CHANGE 30000
-#define PATTERN_CHANGE_DELAY 250
-#define COLOR_STEPS_IN_WHEEL 255
 #define LIGHT_PATTERNS_DEFINED 5
-#define NUM_RGB_LEDS 6
-#define MAX_CLI_INPUT 50
 
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging

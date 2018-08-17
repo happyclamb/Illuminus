@@ -6,8 +6,29 @@
 #include "IlluminusDefs.h"
 #include "SingletonManager.h"
 
+void LightPattern::update(LightPattern* newPattern) {
+	this->pattern = newPattern->pattern;
+	this->pattern_param1 = newPattern->pattern_param1;
+	this->pattern_param2 = newPattern->pattern_param2;
+	this->startTime = newPattern->startTime;
+}
+
+void LightPattern::printPattern()  {
+	info_print(F("pattern: "));
+	info_print(this->pattern);
+	info_print(F("      pattern_param1: "));
+	info_print(this->pattern_param1);
+	info_print(F("      pattern_param2: "));
+	info_print(this->pattern_param2);
+	info_print(F("      startTime: "));
+	info_print(this->startTime);
+}
+
 LightManager::LightManager(SingletonManager* _singleMan):
-	singleMan(_singleMan) {
+	singleMan(_singleMan),
+	currPattern(new LightPattern()),
+	nextPattern(new LightPattern())
+{
 
 	// Init RTG
 	FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
@@ -25,20 +46,30 @@ void LightManager::setBigLightBrightness(byte brightness) {
 	analogWrite(BIG_LED_PIN, brightness);
 }
 
-LightPattern LightManager::getNextPattern() {
+// The currently selected NextPattern
+LightPattern* LightManager::getNextPattern() {
 	return(this->nextPattern);
 }
-void LightManager::setNextPattern(LightPattern newPattern) {
-	this->nextPattern.update(newPattern);
+
+// NextPattern is passed to Sentries via radio messages
+void LightManager::setNextPattern(LightPattern* newPattern) {
+	info_println(F("Setting Next Pattern"));
+	newPattern->printPattern();
+	info_println(F(""));
+
+	this->nextPattern->update(newPattern);
 }
 
 void LightManager::chooseNewPattern() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	if(currTime > this->currPattern.startTime + FORCE_PATTERN_CHANGE)
+
+	if((this->manual_mode == false) &&
+		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		this->nextPattern.pattern = random(0, LIGHT_PATTERNS_DEFINED);
-		this->nextPattern.pattern_param1 = random(1, 4);
-		this->nextPattern.startTime = currTime + PATTERN_CHANGE_DELAY;
+		this->nextPattern->pattern = random(0, LIGHT_PATTERNS_DEFINED);
+		this->nextPattern->pattern_param1 = random(1, 4);
+		this->nextPattern->pattern_param2 = random(1, 4);
+		this->nextPattern->startTime = currTime + this->pattern_duration;
 	}
 }
 
@@ -107,30 +138,34 @@ void LightManager::noAddressPattern() {
 
 void LightManager::checkForPatternUpdate() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	if(currTime > this->nextPattern.startTime) {
-		this->currPattern.update(this->nextPattern);
+	if((currTime > this->nextPattern->startTime) &&
+		(this->nextPattern->startTime != this->currPattern->startTime))
+	{
+		this->currPattern->update(this->nextPattern);
 	}
 }
 
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
-	switch(this->currPattern.pattern) {
-		case 0: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern.pattern_param1,
-			5*(currPattern.pattern_param1 - 1), true); break;
-		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern.pattern_param1,
-			5*(currPattern.pattern_param1 - 1), true); break;
-		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern.pattern_param1,
-			5*(currPattern.pattern_param1 - 1), true); break;
-		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern.pattern_param1,
-			5*(currPattern.pattern_param1 - 1), true); break;
-//		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern.pattern_param1,
+
+
+	switch(this->currPattern->pattern) {
+		case 0: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
+			5*(currPattern->pattern_param2 - 1), true); break;
+		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
+			5*(currPattern->pattern_param2 - 1), true); break;
+		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
+			5*(currPattern->pattern_param2 - 1), true); break;
+		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
+			5*(currPattern->pattern_param2 - 1), true); break;
+//		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
 //			false); break;
-//		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern.pattern_param1,
+//		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
 //			false); break;
-//		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern.pattern_param1,
+//		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
 //			false); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern.pattern_param1,
-			5*(currPattern.pattern_param1 - 1), false); break;
+		case 4: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
+			5*(currPattern->pattern_param2 - 1), false); break;
 
 		case 5: comet(); break;
 		case 6: debugPattern(); break;

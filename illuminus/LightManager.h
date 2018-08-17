@@ -1,6 +1,9 @@
 #ifndef __LIGHTMANAGER_H__
 #define __LIGHTMANAGER_H__
 
+#define NUM_RGB_LEDS 6
+#define COLOR_STEPS_IN_WHEEL 255
+
 #include <Arduino.h>
 #include <FastLED.h>
 
@@ -11,24 +14,16 @@ class SingletonManager;
 
 class LightPattern {
 	public:
+		LightPattern(){};
+		LightPattern(byte init_pattern, byte init_param1, byte init_param2, unsigned long init_startTime):
+			pattern(init_pattern), pattern_param1(init_param1),pattern_param2(init_param2),startTime(init_startTime){};
 		byte pattern = 0;
 		byte pattern_param1 = 1;
+		byte pattern_param2 = 1;
 		unsigned long startTime = 0;
 
-		void update(LightPattern newPattern) {
-			this->pattern = newPattern.pattern;
-			this->pattern_param1 = newPattern.pattern_param1;
-			this->startTime = newPattern.startTime;
-		}
-
-		void printPattern() {
-			info_print("pattern: ");
-			info_print(this->pattern);
-			info_print("      pattern_param1: ");
-			info_print(this->pattern_param1);
-			info_print("      startTime: ");
-			info_print(this->startTime);
-		}
+		void update(LightPattern* newPattern);
+		void printPattern();
 };
 
 enum LightPatternTimingOptions {
@@ -41,10 +36,12 @@ class LightManager {
 	public:
 		LightManager(SingletonManager* _singleMan);
 
+		bool getManualMode() { return this->manual_mode; }
+		void setManualMode(bool newMode) { this->manual_mode = newMode; }
 		void setBigLightBrightness(byte brightness);
 
-		LightPattern getNextPattern();
-		void setNextPattern(LightPattern newPattern);
+		LightPattern* getNextPattern();
+		void setNextPattern(LightPattern* newPattern);
 
 		void chooseNewPattern(); // called from server
 		void redrawLights(); // called from interrupt handler
@@ -52,8 +49,10 @@ class LightManager {
 	private:
 		CRGB ledstrip[NUM_RGB_LEDS];
 		SingletonManager* singleMan = NULL;
-		LightPattern currPattern;
-		LightPattern nextPattern;
+		bool manual_mode = false;
+		LightPattern* currPattern;
+		LightPattern* nextPattern;
+		unsigned long pattern_duration = 30000;
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);

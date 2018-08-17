@@ -1,6 +1,8 @@
 #ifndef __INPUTMANAGER_H__
 #define __INPUTMANAGER_H__
 
+#define MAX_CLI_INPUT 50
+
 #include <Arduino.h>
 #include "IlluminusDefs.h"
 
@@ -29,8 +31,10 @@ class InputManager
 		int soundLevel = 0;
 		byte zoneInput = 0;
 
-		void process_data (const char * data);
+		void processData(const char * data);
 		void processIncomingByte(const byte inByte);
+		void showOptions();
+		void setPattern(const char * data);
 };
 
 #endif // __INPUTMANAGER_H__

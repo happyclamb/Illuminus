@@ -36,7 +36,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 void RadioManager::resetRadio() {
 	// Init Radio
 	if(rf24.begin() == false)	{
-		info_println("RADIO INITIALIZE FAILURE");
+		info_println(F("RADIO INITIALIZE FAILURE"));
 	} else {
 
 		// Reset Failure; Edit RF24_config.h to enable
@@ -125,11 +125,11 @@ unsigned long RadioManager::generateUID() {
 
 void RadioManager::setMillisOffset(long newOffset) {
 	currentMillisOffset = newOffset;
-	info_print("RadioManager::setMillisOffset:: ");
+	info_print(F("RadioManager::setMillisOffset:: "));
 	info_print(currentMillisOffset);
-	debug_print("      CurrentTime: ");
+	debug_print(F("      CurrentTime: "));
 	debug_print(millis());
-	debug_print("      AdjustedTime: ");
+	debug_print(F("      AdjustedTime: "));
 	debug_print(getAdjustedMillis());
 	info_println();
 }
@@ -146,7 +146,7 @@ bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 bool RadioManager::checkRadioForData() {
 
 	if(rf24.failureDetected) {
-		info_println("RADIO ERROR On Check, resetting");
+		info_println(F("RADIO ERROR On Check, resetting"));
 		resetRadio();
 	} else {
 		if(rf24.available()) {
@@ -160,7 +160,7 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->client_end = millis();
 
-			info_print("checkRadioForData:true || message_type:");
+			info_print(F("checkRadioForData:true || message_type:"));
 			info_println(newMessage->messageType);
 
 			if(pushMessage(newMessage) == false)
@@ -239,7 +239,7 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 		// Check for hardware failure, reset radio - then send message
 		if(rf24.failureDetected) {
-			info_println("RADIO ERROR On Send, resetting");
+			info_println(F("RADIO ERROR On Send, resetting"));
 			resetRadio();
 		}
 
@@ -366,18 +366,18 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
 
-	timing_println("***calculateOffsetFromNTPResponseFromServer ************************");
+	timing_println(F("***calculateOffsetFromNTPResponseFromServer ************************"));
 
-	timing_print("calculateOffset --> VagueTxRxTime: ");
+	timing_print(F("calculateOffset --> VagueTxRxTime: "));
 	timing_print(ntpMessage->client_end - ntpMessage->client_start);
 
-	timing_print("    client_start: ");
+	timing_print(F("    client_start: "));
 	timing_print(ntpMessage->client_start);
-	timing_print("    client_end: ");
+	timing_print(F("    client_end: "));
 	timing_print(ntpMessage->client_end);
-	timing_print("    server_start: ");
+	timing_print(F("    server_start: "));
 	timing_print(ntpMessage->server_start);
-	timing_print("    server_end: ");
+	timing_print(F("    server_end: "));
 	timing_println(ntpMessage->server_end);
 
 	/* Have enough data to Do The Math
@@ -395,13 +395,13 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
-	timing_print("t1_t0: ");
+	timing_print(F("t1_t0: "));
 	timing_print(t1_t0);
-	timing_print("    t2_t3: ");
+	timing_print(F("    t2_t3: "));
 	timing_print(t2_t3);
-	timing_print("    offset_LL: ");
+	timing_print(F("    offset_LL: "));
 	timing_print(t1_t0 + t2_t3);
-	timing_print("    offset: ");
+	timing_print(F("    offset: "));
 	timing_println(offset);
 
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
@@ -412,13 +412,13 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
-	timing_print("t3_t0: ");
+	timing_print(F("t3_t0: "));
 	timing_print(t3_t0);
-	timing_print("    t2_t1: ");
+	timing_print(F("    t2_t1: "));
 	timing_print(t2_t1);
-	timing_print("    halfRtripDelay: ");
+	timing_print(F("    halfRtripDelay: "));
 	timing_print(halfRtripDelay);
-	timing_print("    offset: ");
+	timing_print(F("    offset: "));
 	timing_println(offset);
 
 	// return

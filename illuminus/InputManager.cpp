@@ -23,8 +23,8 @@ InputManager::InputManager(SingletonManager* _singleMan) :
 void InputManager::updateValues() {
 
 	// if serial data available, process it
-	while (Serial.available () > 0) {
-		processIncomingByte(Serial.read ());
+	while(Serial.available () > 0) {
+		processIncomingByte(Serial.read());
 	}
 
 	// Poll the zone pins :: HIGH == off, LOW == on
@@ -52,22 +52,8 @@ void InputManager::updateValues() {
 	motionLevel = analogRead(MOTION_SENSOR_A3_PIN);
 }
 
-
-// process incoming serial data after a terminator received
-void InputManager::process_data(const char * data) {
-
-	Serial.println ("process_data!");
-	Serial.println (data);
-
-	if (strcmp(data, "on") == 0) {
-		singleMan->lightMan()->setBigLightBrightness(255);
-	} else if (strcmp(data, "off") == 0) {
-		singleMan->lightMan()->setBigLightBrightness(0);
-	}
-}
-
 void InputManager::processIncomingByte(const byte inByte) {
-	static char input_line [MAX_CLI_INPUT];
+	static char input_line[MAX_CLI_INPUT];
 	static unsigned int input_pos = 0;
 
 	switch (inByte) {
@@ -76,10 +62,10 @@ void InputManager::processIncomingByte(const byte inByte) {
 			break;
 
 		case '\n':   // end of text
-			input_line [input_pos] = 0;  // terminating null byte
+			input_line[input_pos] = 0;  // terminating null byte
 
 			// terminator reached! process input_line
-			process_data (input_line);
+			processData(input_line);
 
 			// reset buffer for next time
 			input_pos = 0;
@@ -88,8 +74,74 @@ void InputManager::processIncomingByte(const byte inByte) {
 		default:
 			// keep adding if not full ... allow for terminating null byte
 			if (input_pos < (MAX_CLI_INPUT - 1)) {
-				input_line [input_pos++] = inByte;
+				input_line[input_pos++] = inByte;
 			}
 			break;
 		}
+}
+
+void InputManager::showOptions() {
+	if(singleMan->addrMan()->getAddress() != 0)  {
+		Serial.println(F("WARNING! Can only set interactive mode on master sentry"));
+	}
+
+	Serial.println(F("Options::"));
+	Serial.println(F("i                start up interactive mode"));
+	Serial.println(F("a                return back to auto choosing patterns"));
+	Serial.println(F("p ### ### ###    select a pattern along with parameters to pass"));
+	Serial.println(F("b ###            select a brightness of big LED"));
+	Serial.println(F(""));
+}
+
+void InputManager::setPattern(const char * data) {
+	byte pattern=0, param_1=0, param_2=0;
+	unsigned long start_time = singleMan->radioMan()->getAdjustedMillis() + 500;
+	char pattern_string[MAX_CLI_INPUT];
+	strcpy(pattern_string, data);
+
+	char * strtokIndx;
+	strtokIndx = strtok(pattern_string, " ");  pattern = atoi(strtokIndx);
+	strtokIndx = strtok(NULL, " ");            param_1 = atoi(strtokIndx);
+	strtokIndx = strtok(NULL, " ");            param_2 = atoi(strtokIndx);
+
+	LightPattern *inputPattern = new LightPattern(pattern,param_1,param_2,start_time);
+	singleMan->lightMan()->setNextPattern(inputPattern);
+	delete inputPattern;
+}
+
+// process incoming serial data after a terminator received
+void InputManager::processData(const char * data) {
+
+	if (strcmp(data, "?") == 0) {
+		showOptions();
+	}
+	else if (strcmp(data, "i") == 0) {
+		if(singleMan->addrMan()->getAddress() == 0)  {
+			singleMan->lightMan()->setManualMode(true);
+			Serial.println(F("Interactive mode set"));
+		} else {
+			Serial.println(F("ERROR! Can only set interactive mode on master sentry"));
+		}
+	} else if (strcmp(data, "a") == 0) {
+		singleMan->lightMan()->setManualMode(false);
+		Serial.println(F("Auto mode set"));
+	} else if (data[0] == 'p') {
+		if(singleMan->lightMan()->getManualMode()) {
+			setPattern(&data[2]);
+		} else {
+			Serial.println(F("ERROR! Can only set pattern in interactive mode"));
+		}
+	} else if (data[0] == 'b') {
+		byte bigLedBright = atoi(&data[2]);
+		Serial.print(F("brightness >> "));
+		Serial.println(bigLedBright);
+		singleMan->lightMan()->setBigLightBrightness(bigLedBright);
+	} else if (strcmp(data, "on") == 0) {
+		singleMan->lightMan()->setBigLightBrightness(255);
+	} else if (strcmp(data, "off") == 0) {
+		singleMan->lightMan()->setBigLightBrightness(0);
+	} else {
+		Serial.print(F("process_data >> "));
+		Serial.println(data);
+	}
 }

@@ -18,7 +18,7 @@ void setup() {
 	singleMan = new SingletonManager();
 
 	// Needs to be set first as there seems to be a bug with the RF24 library where it breaks
-	//	if the pinMode is set afer it is initialized
+	//	if the pinMode is set after it is initialized
 	InputManager *inputMan = new InputManager(singleMan);
 
 	// Initilize the AddressManager
@@ -38,11 +38,11 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER1_irq();
 
-	info_println("Info Logging enabled");
-	debug_println("Debug Logging enabled");
-	timing_println("Timing Logging enabled");
+	info_println(F("Info Logging enabled"));
+	debug_println(F("Debug Logging enabled"));
+	timing_println(F("Timing Logging enabled"));
 
-	info_print("Setup complete; Zone: ");
+	info_print(F("Setup complete; Zone: "));
 	info_println(singleMan->addrMan()->getZone());
 }
 
@@ -204,7 +204,7 @@ void serverLoop() {
 
 			singleMan->radioMan()->sendMessage(ntpStartMessage);
 
-			info_print("Sending NTP COORD message to: ");
+			info_print(F("Sending NTP COORD message to: "));
 			info_println(nextSentryToRunNTP);
 			singleMan->healthMan()->printHealth();
 
@@ -225,21 +225,23 @@ void serverLoop() {
 		// generate newPatterns for LEDs since the interrupt will do the painting
 		singleMan->lightMan()->chooseNewPattern();
 
-		LightPattern nextPattern = singleMan->lightMan()->getNextPattern();
+		// This is a pointer to the original, don't delete it.
+		LightPattern* nextPattern = singleMan->lightMan()->getNextPattern();
 
 		// send color updates
 		RF24Message lightMessage;
 		lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
 		lightMessage.sentrySrcID = 0;
 		lightMessage.sentryTargetID = 255;
-		lightMessage.byteParam1 = nextPattern.pattern;
-		lightMessage.byteParam2 = nextPattern.pattern_param1;
-		lightMessage.server_start = nextPattern.startTime;
+		lightMessage.byteParam1 = nextPattern->pattern;
+		lightMessage.byteParam2 = nextPattern->pattern_param1;
+		lightMessage.byteParam3 = nextPattern->pattern_param2;
+		lightMessage.server_start = nextPattern->startTime;
 
 		singleMan->radioMan()->sendMessage(lightMessage);
-		info_print("Sending Light Update    ");
-		nextPattern.printPattern();
-		info_println("");
+		info_print(F("Sending Light Update    "));
+		nextPattern->printPattern();
+		info_println(F(""));
 
 		// Update lastLEDUpdateCheck
 		lastLEDUpdateCheck = millis();
@@ -277,7 +279,7 @@ void sentryLoop(bool forceNTPCheck) {
 				singleMan->healthMan()->updateSentryNTPRequestTime(address);
 
 				if(currMessage->sentryTargetID == address) {
-					info_println("NTP_COORD_MESSAGE message received");
+					info_println(F("NTP_COORD_MESSAGE message received"));
 
 					// Don't need to echo this message as it is now at final destination
 					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->byteParam1 == 1 ? true : false);
@@ -298,17 +300,14 @@ void sentryLoop(bool forceNTPCheck) {
 				break;
 
 			case COLOR_MESSAGE_TO_SENTRY:
-				LightPattern newPattern;
-				newPattern.pattern = currMessage->byteParam1;
-				newPattern.pattern_param1 = currMessage->byteParam2;
-				newPattern.startTime = currMessage->server_start;
+				LightPattern* newPattern = new LightPattern(
+					currMessage->byteParam1, currMessage->byteParam2,
+					currMessage->byteParam3, currMessage->server_start);
 
 				// update pattern for LEDs since the interrupt will do the painting
 				singleMan->lightMan()->setNextPattern(newPattern);
-
-				info_print("COLOR_MESSAGE_TO_SENTRY message received.  Next pattern is:");
-				newPattern.printPattern();
-				info_println();
+				delete newPattern;
+				newPattern = NULL;
 
 				// Send a response back to Server
 				RF24Message responseMessage;
@@ -330,14 +329,14 @@ void sentryLoop(bool forceNTPCheck) {
 		// lets assume we need 3* the number of requests sent, so each request has that long to timeout.
 		unsigned long ntpRequestTimeout = TIME_BETWEEN_NTP_MSGS / ((unsigned long ) NTP_OFFSET_SUCCESSES_REQUIRED * 3);
 		if(millis() > timeOfLastNTPRequest + ntpRequestTimeout) {
-			debug_println("NTP Request timeout");
+			debug_println(F("NTP Request timeout"));
 			// assume that request has timedout and send another
 			ntpState = NTP_SEND_REQUEST;
 		}
 	}
 
 	if(ntpState == NTP_SEND_REQUEST) {
-			debug_println("Sending NTP Request");
+			debug_println(F("Sending NTP Request"));
 			ntpState = singleMan->radioMan()->sendNTPRequestToServer();
 			timeOfLastNTPRequest = millis();
 	}

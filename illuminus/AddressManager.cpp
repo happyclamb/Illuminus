@@ -23,9 +23,9 @@ void AddressManager::setAddress(byte newAddress) {
 	address = newAddress;
 	addressSet = true;
 
-	info_print("Assigned Zone: ");
+	info_print(F("Assigned Zone: "));
 	info_println(getZone());
-	info_print("Assigned Address: ");
+	info_print(F("Assigned Address: "));
 	info_println(getAddress());
 	delay(5);
 }
@@ -64,7 +64,7 @@ void AddressManager::sendAddressRequest() {
 void AddressManager::obtainAddress() {
 
 	for(byte i=0; i<NEW_ADDRESS_RETRIES; i++) {
-		info_print("Attempt to get address: ");
+		info_print(F("Attempt to get address: "));
 		info_println(i);
 		delay(5);
 
