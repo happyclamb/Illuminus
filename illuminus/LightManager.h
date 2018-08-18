@@ -45,6 +45,10 @@ class LightManager {
 
 		bool getManualMode() { return this->manual_mode; }
 		void setManualMode(bool newMode) { this->manual_mode = newMode; }
+
+		unsigned long getPatternDuration() { return this->pattern_duration; }
+		void setPatternDuration(unsigned long newDuration) { this->pattern_duration = newDuration; }
+
 		void setBigLightBrightness(byte brightness);
 
 		LightPattern* getNextPattern();

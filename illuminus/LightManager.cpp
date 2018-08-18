@@ -91,7 +91,7 @@ void LightManager::chooseNewPattern() {
 		this->nextPattern->pattern_param3 = random(1, 4);
 		this->nextPattern->pattern_param4 = random(1, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
-		this->nextPattern->startTime = currTime + this->pattern_duration;
+		this->nextPattern->startTime = currTime + this->getPatternDuration();
 	}
 }
 

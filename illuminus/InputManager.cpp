@@ -93,6 +93,7 @@ void InputManager::showOptions() {
 	Serial.println(F("l                show current log levels"));
 	Serial.println(F("l ###            toggle log level [info|debug|timing]"));
 	Serial.println(F("p ### ### ###    select a pattern along with parameters to pass"));
+	Serial.println(F("d ######         select a duration between patterns"));
 	Serial.println(F("b ###            select a brightness of big LED"));
 	Serial.println(F("h                shows current health of lanterns in network"));
 	Serial.println(F(""));
@@ -165,6 +166,11 @@ void InputManager::processData(const char * data) {
 		Serial.print(F("Server big LED brightness >> "));
 		Serial.println(bigLedBright);
 		singleMan->lightMan()->setBigLightBrightness(bigLedBright);
+	} else if (data[0] == 'd') {
+		unsigned long newDuration = atol(&data[2]);
+		Serial.print(F("Duration between patterns >> "));
+		Serial.println(newDuration);
+		singleMan->lightMan()->setPatternDuration(newDuration);
 	} else if (data[0] == 'l') {
 		if(strlen(data) == 1)
 			this->showLogLevels();
