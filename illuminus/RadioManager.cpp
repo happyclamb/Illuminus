@@ -163,8 +163,21 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->param4_client_end = millis();
 
-			singleMan->outputMan()->print(LOG_RADIO, F("checkRadioForData   message_type > "));
-			singleMan->outputMan()->println(LOG_RADIO, newMessage->messageType);
+			singleMan->outputMan()->print(LOG_RADIO, F("Handling Message    sentrySrcID > "));
+			singleMan->outputMan()->print(LOG_RADIO, newMessage->sentrySrcID);
+			singleMan->outputMan()->print(LOG_RADIO, F("    Message > "));
+			switch (LOG_RADIO, newMessage->messageType) {
+				case NEW_ADDRESS_REQUEST:        singleMan->outputMan()->print(LOG_RADIO, F("NEW_ADDRESS_REQUEST"));        break;
+				case NEW_ADDRESS_RESPONSE:       singleMan->outputMan()->print(LOG_RADIO, F("NEW_ADDRESS_RESPONSE"));       break;
+				case NTP_COORD_MESSAGE:          singleMan->outputMan()->print(LOG_RADIO, F("NTP_COORD_MESSAGE"));          break;
+				case NTP_CLIENT_REQUEST:         singleMan->outputMan()->print(LOG_RADIO, F("NTP_CLIENT_REQUEST"));         break;
+				case NTP_SERVER_RESPONSE:        singleMan->outputMan()->print(LOG_RADIO, F("NTP_SERVER_RESPONSE"));        break;
+				case NTP_CLIENT_FINISHED:        singleMan->outputMan()->print(LOG_RADIO, F("NTP_CLIENT_FINISHED"));        break;
+				case COLOR_MESSAGE_TO_SENTRY:    singleMan->outputMan()->print(LOG_RADIO, F("COLOR_MESSAGE_TO_SENTRY"));    break;
+				case COLOR_MESSAGE_FROM_SENTRY:  singleMan->outputMan()->print(LOG_RADIO, F("COLOR_MESSAGE_FROM_SENTRY"));  break;
+			}
+			singleMan->outputMan()->print(LOG_RADIO, F("    sentryTargetID > "));
+			singleMan->outputMan()->println(LOG_RADIO, newMessage->sentryTargetID);
 
 			if(pushMessage(newMessage) == false)
 				delete newMessage;
