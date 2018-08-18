@@ -23,10 +23,10 @@ void AddressManager::setAddress(byte newAddress) {
 	address = newAddress;
 	addressSet = true;
 
-	info_print(F("Assigned Zone: "));
-	info_println(getZone());
-	info_print(F("Assigned Address: "));
-	info_println(getAddress());
+	singleMan->outputMan()->print(LOG_INFO, F("Assigned Zone: "));
+	singleMan->outputMan()->println(LOG_INFO, getZone());
+	singleMan->outputMan()->print(LOG_INFO, F("Assigned Address: "));
+	singleMan->outputMan()->println(LOG_INFO, getAddress());
 }
 
 byte AddressManager::getAddress() {
@@ -63,8 +63,8 @@ void AddressManager::sendAddressRequest() {
 void AddressManager::obtainAddress() {
 
 	for(byte i=0; i < this->newAddressRetries; i++) {
-		info_print(F("Attempt to get address: "));
-		info_println(i);
+		singleMan->outputMan()->print(LOG_INFO, F("Attempt to get address: "));
+		singleMan->outputMan()->println(LOG_INFO, i);
 
 		sendAddressRequest();
 		if(hasAddress())

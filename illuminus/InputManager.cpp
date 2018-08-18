@@ -81,6 +81,8 @@ void InputManager::processIncomingByte(const byte inByte) {
 }
 
 void InputManager::showOptions() {
+	Serial.println(F("C&C Lantern CLI"));
+
 	if(singleMan->addrMan()->getAddress() != 0)  {
 		Serial.println(F("WARNING! Can only set interactive mode on master sentry"));
 	}
@@ -88,6 +90,8 @@ void InputManager::showOptions() {
 	Serial.println(F("Options::"));
 	Serial.println(F("i                start up interactive mode"));
 	Serial.println(F("a                return back to auto choosing patterns"));
+	Serial.println(F("l                show current log levels"));
+	Serial.println(F("l ###            toggle log level [info|debug|timing]"));
 	Serial.println(F("p ### ### ###    select a pattern along with parameters to pass"));
 	Serial.println(F("b ###            select a brightness of big LED"));
 	Serial.println(F(""));
@@ -109,11 +113,29 @@ void InputManager::setPattern(const char * data) {
 	delete inputPattern;
 }
 
+void InputManager::showLogLevels() {
+	Serial.println(F("Log Levels::"));
+	Serial.print(F("   info:   "));
+	singleMan->outputMan()->isInfoEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+	Serial.print(F("   debug:  "));
+	singleMan->outputMan()->isDebugEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+	Serial.print(F("   timing: "));
+	singleMan->outputMan()->isTimingEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+}
+
+void InputManager::setLogLevel(const char * data){
+	if (strcmp(data, "info") == 0) singleMan->outputMan()->setInfoEnabled(!singleMan->outputMan()->isInfoEnabled());
+	if (strcmp(data, "debug") == 0) singleMan->outputMan()->setDebugEnabled(!singleMan->outputMan()->isDebugEnabled());
+	if (strcmp(data, "timing") == 0) singleMan->outputMan()->setTimingEnabled(!singleMan->outputMan()->isTimingEnabled());
+
+	this->showLogLevels();
+}
+
 // process incoming serial data after a terminator received
 void InputManager::processData(const char * data) {
 
-	if (strcmp(data, "?") == 0) {
-		showOptions();
+	if (strcmp(data, "?") == 0 || strcmp(data, "help") == 0) {
+		this->showOptions();
 	}
 	else if (strcmp(data, "i") == 0) {
 		if(singleMan->addrMan()->getAddress() == 0)  {
@@ -127,19 +149,20 @@ void InputManager::processData(const char * data) {
 		Serial.println(F("Auto mode set"));
 	} else if (data[0] == 'p') {
 		if(singleMan->lightMan()->getManualMode()) {
-			setPattern(&data[2]);
+			this->setPattern(&data[2]);
 		} else {
 			Serial.println(F("ERROR! Can only set pattern in interactive mode"));
 		}
 	} else if (data[0] == 'b') {
 		byte bigLedBright = atoi(&data[2]);
-		Serial.print(F("brightness >> "));
+		Serial.print(F("Server big LED brightness >> "));
 		Serial.println(bigLedBright);
 		singleMan->lightMan()->setBigLightBrightness(bigLedBright);
-	} else if (strcmp(data, "on") == 0) {
-		singleMan->lightMan()->setBigLightBrightness(255);
-	} else if (strcmp(data, "off") == 0) {
-		singleMan->lightMan()->setBigLightBrightness(0);
+	} else if (data[0] == 'l') {
+		if(strlen(data) == 1)
+			this->showLogLevels();
+		else
+			this->setLogLevel(&data[2]);
 	} else {
 		Serial.print(F("process_data >> "));
 		Serial.println(data);

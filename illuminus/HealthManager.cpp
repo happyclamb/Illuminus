@@ -65,8 +65,8 @@ byte HealthManager::nextAvailSentryID() {
 		currNode = currNode->next;
 	}
 
-	info_print(F("HealthManager::nextAvailSentryID: "));
-	info_println(nextID);
+	singleMan->outputMan()->print(LOG_INFO, F("HealthManager::nextAvailSentryID: "));
+	singleMan->outputMan()->println(LOG_INFO, nextID);
 
 	// set the time to create the Node in the array
 	updateSentryNTPRequestTime(nextID);
@@ -90,18 +90,20 @@ void HealthManager::checkAllSentryHealth() {
 		if(currTime >= deadTime && currNode->health->isAlive == true) {
 			currNode->health->isAlive = false;
 
-			info_print(F("Sentry "));
-			info_print(currNode->health->id);
-			info_print(F(" went offline   "));
-			debug_print(F("-->  currTime:"));
-			debug_print(currTime);
-			debug_print(F("  deadTime:"));
-			debug_print(deadTime);
-			debug_print(F("  lastRequest:"));
-			debug_print(lastRequest);
-			debug_print(F("  deathOffset:"));
-			debug_println(deathOffset);
-			info_println();
+			singleMan->outputMan()->print(LOG_INFO, F("Sentry "));
+			singleMan->outputMan()->print(LOG_INFO, currNode->health->id);
+			singleMan->outputMan()->println(LOG_INFO, F(" went offline   "));
+
+			if(singleMan->outputMan()->isDebugEnabled()) {
+				singleMan->outputMan()->print(LOG_DEBUG, F("-->  currTime:"));
+				singleMan->outputMan()->print(LOG_DEBUG, currTime);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  deadTime:"));
+				singleMan->outputMan()->print(LOG_DEBUG, deadTime);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  lastRequest:"));
+				singleMan->outputMan()->print(LOG_DEBUG, lastRequest);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  deathOffset:"));
+				singleMan->outputMan()->println(LOG_DEBUG, deathOffset);
+			}
 
 			printHealth();
 		}
@@ -139,9 +141,9 @@ void HealthManager::selectNewServer() {
 		SentryHealth* oldSentry = findSentry(currAddress);
 		oldSentry->isAlive = false;
 
-		info_print(F("Sentry "));
-		info_println(currAddress);
-		info_println(F(" changed addres to 0 and promoted to Server"));
+		singleMan->outputMan()->print(LOG_INFO, F("Sentry "));
+		singleMan->outputMan()->print(LOG_INFO, currAddress);
+		singleMan->outputMan()->println(LOG_INFO, F(" changed address to 0 and promoted to Server"));
 		printHealth();
 	}
 
@@ -153,10 +155,10 @@ void HealthManager::pruneEndSentries() {
 
 		// If the lastNode isAlive == false then nuke it
 		if(currNode->next != NULL && currNode->next->next == NULL
-				 && currNode->next->health->isAlive == false) {
-
-			info_print(F("Deleting node:"));
-			info_println(currNode->next->health->id);
+			&& currNode->next->health->isAlive == false)
+		{
+			singleMan->outputMan()->print(LOG_INFO, F("Deleting node:"));
+			singleMan->outputMan()->println(LOG_INFO, currNode->next->health->id);
 
 			delete currNode->next->health;
 			currNode->next->health = NULL;
@@ -175,28 +177,31 @@ void HealthManager::pruneEndSentries() {
 void HealthManager::printHealth() {
 	return;
 
-	// These appears to be trying to dump too much info to the serial and kaaaBOOOM
 	SentryHealthNode *currNode = this->healthQueue;
-	debug_print(F("-------HealthManager::printHealth   currTime> "));
-	debug_println(millis());
-	debug_print(F("   sentryCount> "));
-	debug_println(sentryCount);
+	if (singleMan->outputMan()->isDebugEnabled()) {
+		singleMan->outputMan()->print(LOG_DEBUG, F("-------HealthManager::printHealth   currTime> "));
+		singleMan->outputMan()->print(LOG_DEBUG, millis());
+		singleMan->outputMan()->print(LOG_DEBUG, F("   sentryCount> "));
+		singleMan->outputMan()->println(LOG_DEBUG, sentryCount);
+	}
 
 	byte i=0;
 	while(currNode != NULL) {
-		// debug_print(F("   index:"));
-		// debug_print(i);
-		// debug_print(F("  id:"));
-		// debug_print(currNode->health->id);
-		// debug_print(F("  isAlive:"));
-		// debug_print(currNode->health->isAlive);
-		// debug_print(F("  lastRequest:"));
-		// debug_println(currNode->health->last_NTP_request_start);
+		if (singleMan->outputMan()->isDebugEnabled()) {
+			singleMan->outputMan()->print(LOG_DEBUG, F("   index:"));
+			singleMan->outputMan()->print(LOG_DEBUG, i);
+			singleMan->outputMan()->print(LOG_DEBUG, F("  id:"));
+			singleMan->outputMan()->print(LOG_DEBUG, currNode->health->id);
+			singleMan->outputMan()->print(LOG_DEBUG, F("  isAlive:"));
+			singleMan->outputMan()->print(LOG_DEBUG, currNode->health->isAlive);
+			singleMan->outputMan()->print(LOG_DEBUG, F("  lastRequest:"));
+			singleMan->outputMan()->println(LOG_DEBUG, currNode->health->last_NTP_request_start);
+		}
 
 		i++;
 		currNode = currNode->next;
 	}
-	debug_println(F("---------------------"));
+	singleMan->outputMan()->println(LOG_DEBUG, F("---------------------"));
 }
 
 SentryHealth* HealthManager::addSentry(byte newID) {
@@ -232,8 +237,8 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 		this->sentryCount++;
 	}
 
-	info_print(F("addedSentry: "));
-	info_println(newID);
+	singleMan->outputMan()->print(LOG_INFO, F("addedSentry: "));
+	singleMan->outputMan()->println(LOG_INFO, newID);
 	printHealth();
 
 	return(returnHealth);

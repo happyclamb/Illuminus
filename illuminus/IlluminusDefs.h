@@ -1,34 +1,6 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
-//#define INFO
-//#define DEBUG
-//#define TIMING
-
-#ifdef INFO
- #define info_print(x)     Serial.print(x)
- #define info_println(x)   Serial.println(x)
-#else
- #define info_print(x)
- #define info_println(x)
-#endif
-
-#ifdef DEBUG
- #define debug_print(x)     Serial.print(x)
- #define debug_println(x)   Serial.println(x)
-#else
- #define debug_print(x)
- #define debug_println(x)
-#endif
-
-#ifdef TIMING
- #define timing_print(x)     Serial.print(x)
- #define timing_println(x)   Serial.println(x)
-#else
- #define timing_print(x)
- #define timing_println(x)
-#endif
-
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging
 // #define serialTX 1		// Used for serial debugging
@@ -53,6 +25,5 @@
 #define LIGHT_SENSOR_A1_PIN A1		// Analog; pin 15
 #define SOUND_SENSOR_A2_PIN A2		// Analog; pin 16
 #define MOTION_SENSOR_A3_PIN A3		// Analog; pin 17
-
 
 #endif // __ILLUMINUSDEFS_H__

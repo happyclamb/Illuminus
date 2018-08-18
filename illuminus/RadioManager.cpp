@@ -36,7 +36,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 void RadioManager::resetRadio() {
 	// Init Radio
 	if(rf24.begin() == false)	{
-		info_println(F("RADIO INITIALIZE FAILURE"));
+		singleMan->outputMan()->println(LOG_ERROR, F("RADIO INITIALIZE FAILURE"));
 	} else {
 
 		// Reset Failure; Edit RF24_config.h to enable
@@ -125,13 +125,18 @@ unsigned long RadioManager::generateUID() {
 
 void RadioManager::setMillisOffset(long newOffset) {
 	currentMillisOffset = newOffset;
-	info_print(F("RadioManager::setMillisOffset:: "));
-	info_print(currentMillisOffset);
-	debug_print(F("      CurrentTime: "));
-	debug_print(millis());
-	debug_print(F("      AdjustedTime: "));
-	debug_print(getAdjustedMillis());
-	info_println();
+
+	singleMan->outputMan()->print(LOG_INFO, F("RadioManager::setMillisOffset:: "));
+	singleMan->outputMan()->print(LOG_INFO, currentMillisOffset);
+
+	if (singleMan->outputMan()->isDebugEnabled()) {
+		singleMan->outputMan()->print(LOG_DEBUG, F("      CurrentTime: "));
+		singleMan->outputMan()->print(LOG_DEBUG, millis());
+		singleMan->outputMan()->print(LOG_DEBUG, F("      AdjustedTime: "));
+		singleMan->outputMan()->print(LOG_DEBUG, getAdjustedMillis());
+	}
+
+	singleMan->outputMan()->println(LOG_INFO, F(""));
 }
 
 unsigned long RadioManager::getAdjustedMillis() {
@@ -146,7 +151,7 @@ bool RadioManager::setInformServerWhenNTPDone(bool newValue) {
 bool RadioManager::checkRadioForData() {
 
 	if(rf24.failureDetected) {
-		info_println(F("RADIO ERROR On Check, resetting"));
+		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Check, resetting"));
 		resetRadio();
 	} else {
 		if(rf24.available()) {
@@ -160,8 +165,8 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->client_end = millis();
 
-			info_print(F("checkRadioForData:true || message_type:"));
-			info_println(newMessage->messageType);
+			singleMan->outputMan()->print(LOG_INFO, F("checkRadioForData:true || message_type:"));
+			singleMan->outputMan()->println(LOG_INFO, newMessage->messageType);
 
 			if(pushMessage(newMessage) == false)
 				delete newMessage;
@@ -239,7 +244,7 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 		// Check for hardware failure, reset radio - then send message
 		if(rf24.failureDetected) {
-			info_println(F("RADIO ERROR On Send, resetting"));
+			singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Send, resetting"));
 			resetRadio();
 		}
 
@@ -367,19 +372,20 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
 
-	timing_println(F("***calculateOffsetFromNTPResponseFromServer ************************"));
+	if(singleMan->outputMan()->isTimingEnabled()) {
+		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer ***"));
 
-	timing_print(F("calculateOffset --> VagueTxRxTime: "));
-	timing_print(ntpMessage->client_end - ntpMessage->client_start);
-
-	timing_print(F("    client_start: "));
-	timing_print(ntpMessage->client_start);
-	timing_print(F("    client_end: "));
-	timing_print(ntpMessage->client_end);
-	timing_print(F("    server_start: "));
-	timing_print(ntpMessage->server_start);
-	timing_print(F("    server_end: "));
-	timing_println(ntpMessage->server_end);
+		singleMan->outputMan()->print(LOG_TIMING, F("calculateOffset --> VagueTxRxTime: "));
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_end - ntpMessage->client_start);
+		singleMan->outputMan()->print(LOG_TIMING, F("    client_start: "));
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_start);
+		singleMan->outputMan()->print(LOG_TIMING, F("    client_end: "));
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_end);
+		singleMan->outputMan()->print(LOG_TIMING, F("    server_start: "));
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->server_start);
+		singleMan->outputMan()->print(LOG_TIMING, F("    server_end: "));
+		singleMan->outputMan()->println(LOG_TIMING, ntpMessage->server_end);
+	}
 
 	/* Have enough data to Do The Math
 			https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
@@ -396,14 +402,16 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
-	timing_print(F("t1_t0: "));
-	timing_print(t1_t0);
-	timing_print(F("    t2_t3: "));
-	timing_print(t2_t3);
-	timing_print(F("    offset_LL: "));
-	timing_print(t1_t0 + t2_t3);
-	timing_print(F("    offset: "));
-	timing_println(offset);
+	if(singleMan->outputMan()->isTimingEnabled()) {
+		singleMan->outputMan()->print(LOG_TIMING, F("t1_t0: "));
+		singleMan->outputMan()->print(LOG_TIMING, t1_t0);
+		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t3: "));
+		singleMan->outputMan()->print(LOG_TIMING, t2_t3);
+		singleMan->outputMan()->print(LOG_TIMING, F("    offset_LL: "));
+		singleMan->outputMan()->print(LOG_TIMING, t1_t0 + t2_t3);
+		singleMan->outputMan()->print(LOG_TIMING, F("    offset: "));
+		singleMan->outputMan()->println(LOG_TIMING, offset);
+	}
 
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
 	long t3_t0 = ntpMessage->client_end - ntpMessage->client_start;
@@ -413,14 +421,16 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
-	timing_print(F("t3_t0: "));
-	timing_print(t3_t0);
-	timing_print(F("    t2_t1: "));
-	timing_print(t2_t1);
-	timing_print(F("    halfRtripDelay: "));
-	timing_print(halfRtripDelay);
-	timing_print(F("    offset: "));
-	timing_println(offset);
+	if(singleMan->outputMan()->isTimingEnabled()) {
+		singleMan->outputMan()->print(LOG_TIMING, F("t3_t0: "));
+		singleMan->outputMan()->print(LOG_TIMING, t3_t0);
+		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t1: "));
+		singleMan->outputMan()->print(LOG_TIMING, t2_t1);
+		singleMan->outputMan()->print(LOG_TIMING, F("    halfRtripDelay: "));
+		singleMan->outputMan()->print(LOG_TIMING, halfRtripDelay);
+		singleMan->outputMan()->print(LOG_TIMING, F("    offset: "));
+		singleMan->outputMan()->println(LOG_TIMING, offset);
+	}
 
 	// return
 	return(offset);

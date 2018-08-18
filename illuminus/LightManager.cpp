@@ -13,15 +13,17 @@ void LightPattern::update(LightPattern* newPattern) {
 	this->startTime = newPattern->startTime;
 }
 
-void LightPattern::printPattern()  {
-	info_print(F("pattern: "));
-	info_print(this->pattern);
-	info_print(F("      pattern_param1: "));
-	info_print(this->pattern_param1);
-	info_print(F("      pattern_param2: "));
-	info_print(this->pattern_param2);
-	info_print(F("      startTime: "));
-	info_print(this->startTime);
+void LightPattern::printPattern(SingletonManager* singleMan)  {
+	if (singleMan->outputMan()->isInfoEnabled()) {
+		singleMan->outputMan()->print(LOG_INFO, F("pattern: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern);
+		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param1: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern_param1);
+		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param2: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern_param2);
+		singleMan->outputMan()->print(LOG_INFO, F("      startTime: "));
+		singleMan->outputMan()->print(LOG_INFO, this->startTime);
+	}
 }
 
 LightManager::LightManager(SingletonManager* _singleMan):
@@ -43,8 +45,8 @@ LightManager::LightManager(SingletonManager* _singleMan):
 }
 
 void LightManager::setBigLightBrightness(byte brightness) {
-	info_print(F("setBigLightBrightness:  "));
-	info_println(brightness);
+	singleMan->outputMan()->print(LOG_INFO, F("setBigLightBrightness:  "));
+	singleMan->outputMan()->println(LOG_INFO, brightness);
 	analogWrite(BIG_LED_PIN, brightness);
 }
 
@@ -55,9 +57,8 @@ LightPattern* LightManager::getNextPattern() {
 
 // NextPattern is passed to Sentries via radio messages
 void LightManager::setNextPattern(LightPattern* newPattern) {
-	info_println(F("Setting Next Pattern"));
-	newPattern->printPattern();
-	info_println(F(""));
+	singleMan->outputMan()->println(LOG_INFO, F("Setting Next Pattern"));
+	newPattern->printPattern(singleMan);
 
 	this->nextPattern->update(newPattern);
 }

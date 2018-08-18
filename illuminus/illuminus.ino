@@ -4,6 +4,7 @@
 
 #include "SingletonManager.h"
 #include "InputManager.h"
+#include "OutputManager.h"
 #include "AddressManager.h"
 #include "LightManager.h"
 #include "RadioManager.h"
@@ -17,7 +18,10 @@ void setup() {
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
 
-	// Needs to be set first as there seems to be a bug with the RF24 library where it breaks
+	// Set first so it can be used for output during init routines
+	OutputManager *outputMan = new OutputManager(singleMan);
+
+	// Needs to be set early as there seems to be a bug with the RF24 library where it breaks
 	//	if the pinMode is set after it is initialized
 	InputManager *inputMan = new InputManager(singleMan);
 
@@ -38,12 +42,12 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER1_irq();
 
-	info_println(F("Info Logging enabled"));
-	debug_println(F("Debug Logging enabled"));
-	timing_println(F("Timing Logging enabled"));
+	singleMan->outputMan()->println(LOG_INFO, F("Info Logging enabled"));
+	singleMan->outputMan()->println(LOG_DEBUG, F("Info Logging enabled"));
+	singleMan->outputMan()->println(LOG_TIMING, F("Info Logging enabled"));
 
-	info_print(F("Setup complete; Zone: "));
-	info_println(singleMan->addrMan()->getZone());
+	singleMan->outputMan()->print(LOG_INFO, F("Setup complete; Zone: "));
+	singleMan->outputMan()->println(LOG_INFO, singleMan->addrMan()->getZone());
 }
 
 // initialize timer1 to redraw the LED strip and BigLight
@@ -115,6 +119,9 @@ void loop() {
 		// The light automically goes into flashing blue mode while no address found
 		// Send off a BLOCKING request for a new address
 		singleMan->addrMan()->obtainAddress();
+
+		// Print out the usage options now that the lantern is up and running
+		singleMan->inputMan()->showOptions();
 
 		// First time through, start with a request for an NTP check
 		forceNTPCheck = true;
@@ -206,8 +213,8 @@ void serverLoop() {
 
 			singleMan->radioMan()->sendMessage(ntpStartMessage);
 
-			info_print(F("Sending NTP COORD message to: "));
-			info_println(nextSentryToRunNTP);
+			singleMan->outputMan()->print(LOG_INFO, F("Sending NTP COORD message to: "));
+			singleMan->outputMan()->println(LOG_INFO, nextSentryToRunNTP);
 			singleMan->healthMan()->printHealth();
 
 			// Wrap back to start; reset bootNTPSequence if set.
@@ -241,15 +248,15 @@ void serverLoop() {
 		lightMessage.server_start = nextPattern->startTime;
 
 		singleMan->radioMan()->sendMessage(lightMessage);
-		info_print(F("Sending Light Update    "));
-		nextPattern->printPattern();
-		info_println(F(""));
+
+		singleMan->outputMan()->print(LOG_INFO, F("Sending Light Update    "));
+		nextPattern->printPattern(singleMan);
+		singleMan->outputMan()->println(LOG_INFO, F(""));
 
 		// Update lastLEDUpdateCheck
 		lastLEDUpdateCheck = millis();
 	}
 }
-
 
 
 
@@ -281,7 +288,7 @@ void sentryLoop(bool forceNTPCheck) {
 				singleMan->healthMan()->updateSentryNTPRequestTime(address);
 
 				if(currMessage->sentryTargetID == address) {
-					info_println(F("NTP_COORD_MESSAGE message received"));
+					singleMan->outputMan()->println(LOG_DEBUG, F("NTP_COORD_MESSAGE message received"));
 
 					// Don't need to echo this message as it is now at final destination
 					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->byteParam1 == 1 ? true : false);
@@ -329,14 +336,14 @@ void sentryLoop(bool forceNTPCheck) {
 
 	if(ntpState == NTP_WAITING_FOR_RESPONSE) {
 		if(millis() > timeOfLastNTPRequest + singleMan->radioMan()->ntpRequestTimeout()) {
-			debug_println(F("NTP Request timeout"));
+			singleMan->outputMan()->println(LOG_DEBUG, F("NTP Request timeout"));
 			// assume that request has timedout and send another
 			ntpState = NTP_SEND_REQUEST;
 		}
 	}
 
 	if(ntpState == NTP_SEND_REQUEST) {
-			debug_println(F("Sending NTP Request"));
+			singleMan->outputMan()->println(LOG_DEBUG, F("Sending NTP Request"));
 			ntpState = singleMan->radioMan()->sendNTPRequestToServer();
 			timeOfLastNTPRequest = millis();
 	}

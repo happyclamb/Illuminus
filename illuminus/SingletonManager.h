@@ -4,6 +4,9 @@
 #include "InputManager.h"
 class InputManager;
 
+#include "OutputManager.h"
+class OutputManager;
+
 #include "AddressManager.h"
 class AddressManager;
 
@@ -24,6 +27,9 @@ class SingletonManager
 		InputManager* inputMan() { return inputManager; }
 		void setInputMan(InputManager* _inputMan) { inputManager = _inputMan; }
 
+		OutputManager* outputMan() { return outputManager; }
+		void setOutputMan(OutputManager* _outputMan) { outputManager = _outputMan; }
+
 		AddressManager* addrMan()  { return addrManager; }
 		void setAddrMan(AddressManager* _addrMan) { addrManager = _addrMan; }
 
@@ -38,6 +44,7 @@ class SingletonManager
 
 	private:
 		InputManager* inputManager = NULL;
+		OutputManager* outputManager = NULL;
 		AddressManager* addrManager = NULL;
 		LightManager* lightManager = NULL;
 		RadioManager* radioManager = NULL;

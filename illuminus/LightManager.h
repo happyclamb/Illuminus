@@ -23,7 +23,7 @@ class LightPattern {
 		unsigned long startTime = 0;
 
 		void update(LightPattern* newPattern);
-		void printPattern();
+		void printPattern(SingletonManager* singleMan);
 };
 
 enum LightPatternTimingOptions {

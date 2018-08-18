@@ -13,6 +13,7 @@ class InputManager
 {
 	public:
 		InputManager(SingletonManager* _singleMan);
+		void showOptions();
 
 		void updateValues();
 		bool isButton1Pressed() { return this->button1_pressed; }
@@ -33,8 +34,10 @@ class InputManager
 
 		void processData(const char * data);
 		void processIncomingByte(const byte inByte);
-		void showOptions();
 		void setPattern(const char * data);
+		void showLogLevels();
+		void setLogLevel(const char * data);
+
 };
 
 #endif // __INPUTMANAGER_H__
