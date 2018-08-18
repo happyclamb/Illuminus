@@ -22,14 +22,14 @@ class RF24Message
 		byte sentrySrcID = 0; // 1 byte
 		byte sentryTargetID = 0; // 1 byte
 
-		byte byteParam1 = 0; // 1 byte
-		byte byteParam2 = 0; // 1 byte
-		byte byteParam3 = 0; // 1 byte
+		byte param1_byte = 0; // 1 byte
+		byte param2_byte = 0; // 1 byte
+		byte param3_byte = 0; // 1 byte
 
-		unsigned long client_start = 0; // 4 bytes
-		unsigned long client_end = 0; // 4 bytes
-		unsigned long server_start = 0; // 4 bytes
-		unsigned long server_end = 0; // 4 bytes
+		unsigned long param4_client_end = 0; // 4 bytes
+		unsigned long param5_client_start = 0; // 4 bytes
+		unsigned long param6_server_end = 0; // 4 bytes
+		unsigned long param7_server_start = 0; // 4 bytes
 };
 
 enum Radio_Message_Type {

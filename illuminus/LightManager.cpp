@@ -8,21 +8,37 @@
 
 void LightPattern::update(LightPattern* newPattern) {
 	this->pattern = newPattern->pattern;
+
 	this->pattern_param1 = newPattern->pattern_param1;
 	this->pattern_param2 = newPattern->pattern_param2;
+	this->pattern_param3 = newPattern->pattern_param3;
+	this->pattern_param4 = newPattern->pattern_param4;
+	this->pattern_param5 = newPattern->pattern_param5;
+
 	this->startTime = newPattern->startTime;
 }
 
-void LightPattern::printPattern(SingletonManager* singleMan)  {
-	if (singleMan->outputMan()->isInfoEnabled()) {
+void LightPattern::printPattern(SingletonManager* singleMan, bool forcePrint /*= false*/)  {
+	bool origInfoValue = singleMan->outputMan()->isInfoEnabled();
+	if (origInfoValue || forcePrint) {
+		singleMan->outputMan()->setInfoEnabled(true);
+
 		singleMan->outputMan()->print(LOG_INFO, F("pattern: "));
 		singleMan->outputMan()->print(LOG_INFO, this->pattern);
 		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param1: "));
 		singleMan->outputMan()->print(LOG_INFO, this->pattern_param1);
 		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param2: "));
 		singleMan->outputMan()->print(LOG_INFO, this->pattern_param2);
+		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param3: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern_param3);
+		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param4: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern_param4);
+		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param5: "));
+		singleMan->outputMan()->print(LOG_INFO, this->pattern_param5);
 		singleMan->outputMan()->print(LOG_INFO, F("      startTime: "));
 		singleMan->outputMan()->print(LOG_INFO, this->startTime);
+
+		singleMan->outputMan()->setInfoEnabled(origInfoValue);
 	}
 }
 
@@ -56,9 +72,9 @@ LightPattern* LightManager::getNextPattern() {
 }
 
 // NextPattern is passed to Sentries via radio messages
-void LightManager::setNextPattern(LightPattern* newPattern) {
+void LightManager::setNextPattern(LightPattern* newPattern, bool forcePrint /*= false*/) {
 	singleMan->outputMan()->println(LOG_INFO, F("Setting Next Pattern"));
-	newPattern->printPattern(singleMan);
+	newPattern->printPattern(singleMan, forcePrint);
 
 	this->nextPattern->update(newPattern);
 }
@@ -70,8 +86,11 @@ void LightManager::chooseNewPattern() {
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
-		this->nextPattern->pattern_param1 = random(1, 4);
-		this->nextPattern->pattern_param2 = random(1, 4);
+		this->nextPattern->pattern_param1 = random(1, 4)*20;
+		this->nextPattern->pattern_param2 = random(0, 3)*5;
+		this->nextPattern->pattern_param3 = random(1, 4);
+		this->nextPattern->pattern_param4 = random(1, 4);
+		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime + this->pattern_duration;
 	}
 }
@@ -150,33 +169,27 @@ void LightManager::checkForPatternUpdate() {
 
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
-
-
 	switch(this->currPattern->pattern) {
 		case 0:
 			debugPattern();
 			break;
 		case 1:
-			solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
-				5*(currPattern->pattern_param2 - 1), true);
+			solidWheelColorChange(PATTERN_TIMING_SYNC, currPattern->pattern_param1,
+				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
 		case 2:
-			solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
-				5*(currPattern->pattern_param2 - 1), true);
+			solidWheelColorChange(PATTERN_TIMING_STAGGER, currPattern->pattern_param1,
+				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
 		case 3:
-			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
-				5*(currPattern->pattern_param2 - 1), true);
+			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, currPattern->pattern_param1,
+				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
 		case 4:
-			solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
-				5*(currPattern->pattern_param2 - 1), true);
+			solidWheelColorChange(PATTERN_TIMING_NONE, currPattern->pattern_param1,
+				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
 		case 5:
-			solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
-				5*(currPattern->pattern_param2 - 1), false);
-			break;
-		case 6:
 			comet();
 			break;
 	}

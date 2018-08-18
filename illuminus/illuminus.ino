@@ -209,7 +209,7 @@ void serverLoop() {
 			ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
 
 			// only request response if it'll be used (aka: during boot sequence)
-			ntpStartMessage.byteParam1 = bootNTPSequence ? 1 : 0;
+			ntpStartMessage.param1_byte = bootNTPSequence ? 1 : 0;
 
 			singleMan->radioMan()->sendMessage(ntpStartMessage);
 
@@ -242,10 +242,13 @@ void serverLoop() {
 		lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
 		lightMessage.sentrySrcID = 0;
 		lightMessage.sentryTargetID = 255;
-		lightMessage.byteParam1 = nextPattern->pattern;
-		lightMessage.byteParam2 = nextPattern->pattern_param1;
-		lightMessage.byteParam3 = nextPattern->pattern_param2;
-		lightMessage.server_start = nextPattern->startTime;
+		lightMessage.param1_byte = nextPattern->pattern;
+		lightMessage.param2_byte = nextPattern->pattern_param1;
+		lightMessage.param3_byte = nextPattern->pattern_param2;
+		lightMessage.param4_client_end = nextPattern->pattern_param3;
+		lightMessage.param5_client_start = nextPattern->pattern_param4;
+		lightMessage.param6_server_end = nextPattern->pattern_param5;
+		lightMessage.param7_server_start = nextPattern->startTime;
 
 		singleMan->radioMan()->sendMessage(lightMessage);
 
@@ -291,7 +294,7 @@ void sentryLoop(bool forceNTPCheck) {
 					singleMan->outputMan()->println(LOG_DEBUG, F("NTP_COORD_MESSAGE message received"));
 
 					// Don't need to echo this message as it is now at final destination
-					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->byteParam1 == 1 ? true : false);
+					singleMan->radioMan()->setInformServerWhenNTPDone(currMessage->param1_byte == 1 ? true : false);
 					ntpState = NTP_SEND_REQUEST;
 					timeOfLastNTPRequest = 0;
 					doEcho = false;
@@ -310,8 +313,10 @@ void sentryLoop(bool forceNTPCheck) {
 
 			case COLOR_MESSAGE_TO_SENTRY:
 				LightPattern* newPattern = new LightPattern(
-					currMessage->byteParam1, currMessage->byteParam2,
-					currMessage->byteParam3, currMessage->server_start);
+					currMessage->param1_byte, currMessage->param2_byte,
+					currMessage->param3_byte, (byte)currMessage->param4_client_end,
+					(byte)currMessage->param5_client_start, (byte)currMessage->param6_server_end,
+					currMessage->param7_server_start);
 
 				// update pattern for LEDs since the interrupt will do the painting
 				singleMan->lightMan()->setNextPattern(newPattern);

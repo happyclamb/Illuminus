@@ -99,7 +99,7 @@ void InputManager::showOptions() {
 }
 
 void InputManager::setPattern(const char * data) {
-	byte pattern=0, param_1=0, param_2=0;
+	byte pattern=0, param_1=0, param_2=0, param_3=0, param_4=0, param_5=0;
 	unsigned long start_time = singleMan->radioMan()->getAdjustedMillis() + 500;
 	char pattern_string[MAX_CLI_INPUT];
 	strcpy(pattern_string, data);
@@ -108,10 +108,16 @@ void InputManager::setPattern(const char * data) {
 	strtokIndx = strtok(pattern_string, " ");  pattern = atoi(strtokIndx);
 	strtokIndx = strtok(NULL, " ");            param_1 = atoi(strtokIndx);
 	strtokIndx = strtok(NULL, " ");            param_2 = atoi(strtokIndx);
+	strtokIndx = strtok(NULL, " ");            param_3 = atoi(strtokIndx);
+	strtokIndx = strtok(NULL, " ");            param_4 = atoi(strtokIndx);
+	strtokIndx = strtok(NULL, " ");            param_5 = atoi(strtokIndx);
 
-	LightPattern *inputPattern = new LightPattern(pattern,param_1,param_2,start_time);
-	singleMan->lightMan()->setNextPattern(inputPattern);
+	Serial.println(F("New Pattern::"));
+	LightPattern *inputPattern = new LightPattern(
+		pattern, param_1, param_2, param_3, param_4, param_5, start_time);
+	singleMan->lightMan()->setNextPattern(inputPattern, true);
 	delete inputPattern;
+	Serial.println(F(""));
 }
 
 void InputManager::showLogLevels() {

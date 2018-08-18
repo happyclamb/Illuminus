@@ -182,10 +182,14 @@ void HealthManager::printHealth(bool forcePrint /*= false*/) {
 		singleMan->outputMan()->setDebugEnabled(true);
 
 		SentryHealthNode *currNode = this->healthQueue;
-		singleMan->outputMan()->print(LOG_DEBUG, F("-------HealthManager   currTime> "));
+		singleMan->outputMan()->print(LOG_DEBUG, F("------- HealthManager    currTime > "));
 		singleMan->outputMan()->print(LOG_DEBUG, millis());
-		singleMan->outputMan()->print(LOG_DEBUG, F("   sentryCount> "));
-		singleMan->outputMan()->println(LOG_DEBUG, sentryCount);
+		singleMan->outputMan()->print(LOG_DEBUG, F("    adjustedTime > "));
+		singleMan->outputMan()->print(LOG_DEBUG, singleMan->radioMan()->getAdjustedMillis());
+		singleMan->outputMan()->print(LOG_DEBUG, F("    sentryCount > "));
+		singleMan->outputMan()->print(LOG_DEBUG, sentryCount);
+		singleMan->outputMan()->print(LOG_DEBUG, F("    this.address > "));
+		singleMan->outputMan()->println(LOG_DEBUG, singleMan->addrMan()->getAddress());
 
 		byte i=0;
 		while(currNode != NULL) {

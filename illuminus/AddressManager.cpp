@@ -48,7 +48,7 @@ void AddressManager::sendAddressRequest() {
 		RF24Message* currMessage = singleMan->radioMan()->popMessage();
 		while(currMessage != NULL) {
 			if(currMessage->messageType == NEW_ADDRESS_RESPONSE) {
-				setAddress(currMessage->byteParam1);
+				setAddress(currMessage->param1_byte);
 			}
 			delete currMessage;
 
@@ -88,7 +88,7 @@ void AddressManager::sendNewAddressResponse() {
 	addressResponseMessage.messageType = NEW_ADDRESS_RESPONSE;
 	addressResponseMessage.sentrySrcID = 0;
 	addressResponseMessage.sentryTargetID = 255;
-	addressResponseMessage.byteParam1 = targetSentry;
+	addressResponseMessage.param1_byte = targetSentry;
 
 	singleMan->radioMan()->sendMessage(addressResponseMessage);
 }

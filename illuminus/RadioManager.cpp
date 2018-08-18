@@ -161,9 +161,9 @@ bool RadioManager::checkRadioForData() {
 			// If the payload is a NTP_CLIENT_REQUEST then immediately
 			//	update server_start time
 			if(newMessage->messageType == NTP_CLIENT_REQUEST)
-				newMessage->server_start = millis();
+				newMessage->param7_server_start = millis();
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
-				newMessage->client_end = millis();
+				newMessage->param4_client_end = millis();
 
 			singleMan->outputMan()->print(LOG_INFO, F("checkRadioForData:true || message_type:"));
 			singleMan->outputMan()->println(LOG_INFO, newMessage->messageType);
@@ -305,10 +305,10 @@ NTP_state RadioManager::sendNTPRequestToServer() {
 	ntpOut.messageType = NTP_CLIENT_REQUEST;
 	ntpOut.sentrySrcID = singleMan->addrMan()->getAddress();
 	ntpOut.sentryTargetID = 0;
-	ntpOut.server_end = 0;
-	ntpOut.server_start = 0;
-	ntpOut.client_end = 0;
-	ntpOut.client_start = millis();
+	ntpOut.param4_client_end = 0;
+	ntpOut.param5_client_start = millis();
+	ntpOut.param6_server_end = 0;
+	ntpOut.param7_server_start = 0;
 
 	sendMessage(ntpOut);
 
@@ -356,7 +356,7 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 				ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
 				ntpClientFinished.sentrySrcID = singleMan->addrMan()->getAddress();
 				ntpClientFinished.sentryTargetID = 0;
-				ntpClientFinished.client_start = averagedOffset;
+				ntpClientFinished.param5_client_start = averagedOffset;
 				sendMessage(ntpClientFinished);
 			}
 
@@ -376,15 +376,15 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer ***"));
 
 		singleMan->outputMan()->print(LOG_TIMING, F("calculateOffset --> VagueTxRxTime: "));
-		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_end - ntpMessage->client_start);
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param4_client_end - ntpMessage->param5_client_start);
 		singleMan->outputMan()->print(LOG_TIMING, F("    client_start: "));
-		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_start);
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param5_client_start);
 		singleMan->outputMan()->print(LOG_TIMING, F("    client_end: "));
-		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->client_end);
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param4_client_end);
 		singleMan->outputMan()->print(LOG_TIMING, F("    server_start: "));
-		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->server_start);
+		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param7_server_start);
 		singleMan->outputMan()->print(LOG_TIMING, F("    server_end: "));
-		singleMan->outputMan()->println(LOG_TIMING, ntpMessage->server_end);
+		singleMan->outputMan()->println(LOG_TIMING, ntpMessage->param6_server_end);
 	}
 
 	/* Have enough data to Do The Math
@@ -397,8 +397,8 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 				t3 == client_end
 	*/
 	//  long offSet = ((long)(timeData.server_start - timeData.client_start) + (long)(timeData.server_end - timeData.client_end)) / (long)2;
-	long t1_t0 = ntpMessage->server_start - ntpMessage->client_start;
-	long t2_t3 = ntpMessage->server_end - ntpMessage->client_end;
+	long t1_t0 = ntpMessage->param7_server_start - ntpMessage->param5_client_start;
+	long t2_t3 = ntpMessage->param6_server_end - ntpMessage->param4_client_end;
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
@@ -414,8 +414,8 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	}
 
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
-	long t3_t0 = ntpMessage->client_end - ntpMessage->client_start;
-	long t2_t1 = ntpMessage->server_end - ntpMessage->server_start;
+	long t3_t0 = ntpMessage->param4_client_end - ntpMessage->param5_client_start;
+	long t2_t1 = ntpMessage->param6_server_end - ntpMessage->param7_server_start;
 	long halfRtripDelay = (t3_t0 - t2_t1) / 2;
 
 	// Update offset to use the delay
@@ -445,6 +445,6 @@ void RadioManager::handleNTPClientRequest(RF24Message* ntpMessage) {
 	ntpMessage->sentryTargetID = ntpMessage->sentrySrcID;
 	ntpMessage->sentrySrcID = 0;
 
-	ntpMessage->server_end = millis();
+	ntpMessage->param6_server_end = millis();
 	sendMessage(*ntpMessage);
 }

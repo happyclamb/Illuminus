@@ -15,15 +15,22 @@ class SingletonManager;
 class LightPattern {
 	public:
 		LightPattern(){};
-		LightPattern(byte init_pattern, byte init_param1, byte init_param2, unsigned long init_startTime):
-			pattern(init_pattern), pattern_param1(init_param1),pattern_param2(init_param2),startTime(init_startTime){};
+		LightPattern(byte init_pattern, byte init_param1, byte init_param2,
+			byte init_param3, byte init_param4, byte init_param5, unsigned long init_startTime):
+			pattern(init_pattern), pattern_param1(init_param1), pattern_param2(init_param2), pattern_param3(init_param3),
+			pattern_param4(init_param4), pattern_param5(init_param5), startTime(init_startTime){};
+
 		byte pattern = 1;
 		byte pattern_param1 = 1;
 		byte pattern_param2 = 1;
+		byte pattern_param3 = 1;
+		byte pattern_param4 = 1;
+		byte pattern_param5 = 1;
+
 		unsigned long startTime = 0;
 
 		void update(LightPattern* newPattern);
-		void printPattern(SingletonManager* singleMan);
+		void printPattern(SingletonManager* singleMan, bool forcePrint = false);
 };
 
 enum LightPatternTimingOptions {
@@ -41,7 +48,7 @@ class LightManager {
 		void setBigLightBrightness(byte brightness);
 
 		LightPattern* getNextPattern();
-		void setNextPattern(LightPattern* newPattern);
+		void setNextPattern(LightPattern* newPattern, bool forcePrint = false);
 
 		void chooseNewPattern(); // called from server
 		void redrawLights(); // called from interrupt handler
@@ -53,7 +60,7 @@ class LightManager {
 		LightPattern* currPattern;
 		LightPattern* nextPattern;
 
-		byte number_patterns_defined = 5;
+		byte number_patterns_defined = 4;
 		unsigned long pattern_duration = 30000;
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
