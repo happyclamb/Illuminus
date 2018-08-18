@@ -1,15 +1,6 @@
 #include <Arduino.h>
 
-#include "IlluminusDefs.h"
-
 #include "SingletonManager.h"
-#include "InputManager.h"
-#include "OutputManager.h"
-#include "AddressManager.h"
-#include "LightManager.h"
-#include "RadioManager.h"
-#include "HealthManager.h"
-
 SingletonManager *singleMan = NULL;
 
 void setup() {
@@ -213,9 +204,8 @@ void serverLoop() {
 
 			singleMan->radioMan()->sendMessage(ntpStartMessage);
 
-			singleMan->outputMan()->print(LOG_INFO, F("Sending NTP COORD message to: "));
-			singleMan->outputMan()->println(LOG_INFO, nextSentryToRunNTP);
-			singleMan->healthMan()->printHealth();
+			singleMan->outputMan()->print(LOG_RADIO, F("Sending NTP COORD message to: "));
+			singleMan->outputMan()->println(LOG_RADIO, nextSentryToRunNTP);
 
 			// Wrap back to start; reset bootNTPSequence if set.
 			nextSentryToRunNTP++;
@@ -252,9 +242,9 @@ void serverLoop() {
 
 		singleMan->radioMan()->sendMessage(lightMessage);
 
-		singleMan->outputMan()->print(LOG_INFO, F("Sending Light Update    "));
-		nextPattern->printPattern(singleMan);
-		singleMan->outputMan()->println(LOG_INFO, F(""));
+		singleMan->outputMan()->print(LOG_RADIO, F("Sending Light Update    "));
+		nextPattern->printPattern(singleMan, LOG_RADIO);
+		singleMan->outputMan()->println(LOG_RADIO, F(""));
 
 		// Update lastLEDUpdateCheck
 		lastLEDUpdateCheck = millis();
@@ -319,7 +309,7 @@ void sentryLoop(bool forceNTPCheck) {
 					currMessage->param7_server_start);
 
 				// update pattern for LEDs since the interrupt will do the painting
-				singleMan->lightMan()->setNextPattern(newPattern);
+				singleMan->lightMan()->setNextPattern(newPattern, LOG_RADIO);
 				delete newPattern;
 				newPattern = NULL;
 

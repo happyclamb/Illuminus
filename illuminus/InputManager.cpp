@@ -1,4 +1,6 @@
 #include "InputManager.h"
+#include "OutputManager.h"
+
 #include "IlluminusDefs.h"
 #include "SingletonManager.h"
 #include "LightManager.h"
@@ -116,7 +118,7 @@ void InputManager::setPattern(const char * data) {
 	Serial.println(F("New Pattern::"));
 	LightPattern *inputPattern = new LightPattern(
 		pattern, param_1, param_2, param_3, param_4, param_5, start_time);
-	singleMan->lightMan()->setNextPattern(inputPattern, true);
+	singleMan->lightMan()->setNextPattern(inputPattern, LOG_CLI);
 	delete inputPattern;
 	Serial.println(F(""));
 }
@@ -124,19 +126,30 @@ void InputManager::setPattern(const char * data) {
 void InputManager::showLogLevels() {
 	Serial.println(F("Log Levels::"));
 	Serial.print(F("   info:   "));
-	singleMan->outputMan()->isInfoEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+	singleMan->outputMan()->isLogLevelEnabled(LOG_INFO) ? Serial.println(F("on")) : Serial.println(F("off"));
 	Serial.print(F("   debug:  "));
-	singleMan->outputMan()->isDebugEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+	singleMan->outputMan()->isLogLevelEnabled(LOG_DEBUG) ? Serial.println(F("on")) : Serial.println(F("off"));
+	Serial.print(F("   radio:  "));
+	singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO) ? Serial.println(F("on")) : Serial.println(F("off"));
 	Serial.print(F("   timing: "));
-	singleMan->outputMan()->isTimingEnabled() ? Serial.println(F("on")) : Serial.println(F("off"));
+	singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING) ? Serial.println(F("on")) : Serial.println(F("off"));
 }
 
 void InputManager::setLogLevel(const char * data){
-	if (strcmp(data, "info") == 0) singleMan->outputMan()->setInfoEnabled(!singleMan->outputMan()->isInfoEnabled());
-	if (strcmp(data, "debug") == 0) singleMan->outputMan()->setDebugEnabled(!singleMan->outputMan()->isDebugEnabled());
-	if (strcmp(data, "timing") == 0) singleMan->outputMan()->setTimingEnabled(!singleMan->outputMan()->isTimingEnabled());
+	OUTPUT_LOG_TYPES log_level = LOG_CLI;
+	if (strcmp(data, "info") == 0)
+		log_level = LOG_INFO;
+	else if (strcmp(data, "debug") == 0)
+		log_level = LOG_DEBUG;
+	else if (strcmp(data, "radio") == 0)
+		log_level = LOG_RADIO;
+	else if (strcmp(data, "timing") == 0)
+		log_level = LOG_TIMING;
 
-	this->showLogLevels();
+	if(log_level != LOG_CLI) {
+		singleMan->outputMan()->setLogLevel(log_level, !singleMan->outputMan()->isLogLevelEnabled(log_level));
+		this->showLogLevels();
+	}
 }
 
 // process incoming serial data after a terminator received
@@ -178,7 +191,7 @@ void InputManager::processData(const char * data) {
 		else
 			this->setLogLevel(&data[2]);
 	} else if (data[0] == 'h') {
-		singleMan->healthMan()->printHealth(true);
+		singleMan->healthMan()->printHealth(LOG_CLI);
 	} else {
 		Serial.print(F("UNKNOWN COMMAND >> "));
 		Serial.println(data);

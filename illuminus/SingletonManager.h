@@ -1,11 +1,11 @@
 #ifndef __SINGLETONMANAGER_H__
 #define __SINGLETONMANAGER_H__
 
-#include "InputManager.h"
-class InputManager;
-
 #include "OutputManager.h"
 class OutputManager;
+
+#include "InputManager.h"
+class InputManager;
 
 #include "AddressManager.h"
 class AddressManager;
@@ -24,11 +24,11 @@ class SingletonManager
 	public:
 		SingletonManager() {}
 
-		InputManager* inputMan() { return inputManager; }
-		void setInputMan(InputManager* _inputMan) { inputManager = _inputMan; }
-
 		OutputManager* outputMan() { return outputManager; }
 		void setOutputMan(OutputManager* _outputMan) { outputManager = _outputMan; }
+
+		InputManager* inputMan() { return inputManager; }
+		void setInputMan(InputManager* _inputMan) { inputManager = _inputMan; }
 
 		AddressManager* addrMan()  { return addrManager; }
 		void setAddrMan(AddressManager* _addrMan) { addrManager = _addrMan; }
@@ -43,8 +43,8 @@ class SingletonManager
 		void setHealthMan(HealthManager* _healthMan) { healthManager = _healthMan; }
 
 	private:
-		InputManager* inputManager = NULL;
 		OutputManager* outputManager = NULL;
+		InputManager* inputManager = NULL;
 		AddressManager* addrManager = NULL;
 		LightManager* lightManager = NULL;
 		RadioManager* radioManager = NULL;

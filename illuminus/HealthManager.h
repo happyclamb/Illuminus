@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "IlluminusDefs.h"
+#include "OutputManager.h"
 
 #include "SingletonManager.h"
 class SingletonManager;
@@ -31,7 +32,7 @@ class HealthManager
 		SentryHealth* findSentry(byte id);
 		void checkAllSentryHealth();
 		void selectNewServer();
-		void printHealth(bool forcePrint = false);
+		void printHealth(OUTPUT_LOG_TYPES log_level);
 
 	private:
 		SingletonManager* singleMan = NULL;

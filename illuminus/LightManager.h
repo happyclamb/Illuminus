@@ -7,10 +7,11 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
+#include "OutputManager.h"
 #include "IlluminusDefs.h"
-
 #include "SingletonManager.h"
 class SingletonManager;
+
 
 class LightPattern {
 	public:
@@ -30,14 +31,15 @@ class LightPattern {
 		unsigned long startTime = 0;
 
 		void update(LightPattern* newPattern);
-		void printPattern(SingletonManager* singleMan, bool forcePrint = false);
+		void printPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level);
 };
 
 enum LightPatternTimingOptions {
 			PATTERN_TIMING_NONE,
 			PATTERN_TIMING_STAGGER,
 			PATTERN_TIMING_ALTERNATE,
-			PATTERN_TIMING_SYNC };
+			PATTERN_TIMING_SYNC
+};
 
 class LightManager {
 	public:
@@ -52,7 +54,7 @@ class LightManager {
 		void setBigLightBrightness(byte brightness);
 
 		LightPattern* getNextPattern();
-		void setNextPattern(LightPattern* newPattern, bool forcePrint = false);
+		void setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level);
 
 		void chooseNewPattern(unsigned long nextPatternTimeOffset = 0); // called from server
 		void redrawLights(); // called from interrupt handler

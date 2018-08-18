@@ -4,6 +4,7 @@
 #include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
 
 #include "IlluminusDefs.h"
+#include "OutputManager.h"
 #include "SingletonManager.h"
 
 void LightPattern::update(LightPattern* newPattern) {
@@ -18,27 +19,22 @@ void LightPattern::update(LightPattern* newPattern) {
 	this->startTime = newPattern->startTime;
 }
 
-void LightPattern::printPattern(SingletonManager* singleMan, bool forcePrint /*= false*/)  {
-	bool origInfoValue = singleMan->outputMan()->isInfoEnabled();
-	if (origInfoValue || forcePrint) {
-		singleMan->outputMan()->setInfoEnabled(true);
-
-		singleMan->outputMan()->print(LOG_INFO, F("pattern: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern);
-		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param1: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern_param1);
-		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param2: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern_param2);
-		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param3: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern_param3);
-		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param4: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern_param4);
-		singleMan->outputMan()->print(LOG_INFO, F("      pattern_param5: "));
-		singleMan->outputMan()->print(LOG_INFO, this->pattern_param5);
-		singleMan->outputMan()->print(LOG_INFO, F("      startTime: "));
-		singleMan->outputMan()->print(LOG_INFO, this->startTime);
-
-		singleMan->outputMan()->setInfoEnabled(origInfoValue);
+void LightPattern::printPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level)  {
+	if (singleMan->outputMan()->isLogLevelEnabled(log_level)) {
+		singleMan->outputMan()->print(log_level, F("pattern: "));
+		singleMan->outputMan()->print(log_level, this->pattern);
+		singleMan->outputMan()->print(log_level, F("      pattern_param1: "));
+		singleMan->outputMan()->print(log_level, this->pattern_param1);
+		singleMan->outputMan()->print(log_level, F("      pattern_param2: "));
+		singleMan->outputMan()->print(log_level, this->pattern_param2);
+		singleMan->outputMan()->print(log_level, F("      pattern_param3: "));
+		singleMan->outputMan()->print(log_level, this->pattern_param3);
+		singleMan->outputMan()->print(log_level, F("      pattern_param4: "));
+		singleMan->outputMan()->print(log_level, this->pattern_param4);
+		singleMan->outputMan()->print(log_level, F("      pattern_param5: "));
+		singleMan->outputMan()->print(log_level, this->pattern_param5);
+		singleMan->outputMan()->print(log_level, F("      startTime: "));
+		singleMan->outputMan()->print(log_level, this->startTime);
 	}
 }
 
@@ -72,9 +68,9 @@ LightPattern* LightManager::getNextPattern() {
 }
 
 // NextPattern is passed to Sentries via radio messages
-void LightManager::setNextPattern(LightPattern* newPattern, bool forcePrint /*= false*/) {
-	singleMan->outputMan()->println(LOG_INFO, F("Setting Next Pattern"));
-	newPattern->printPattern(singleMan, forcePrint);
+void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level) {
+	singleMan->outputMan()->println(log_level, F("Setting Next Pattern"));
+	newPattern->printPattern(singleMan, log_level);
 
 	this->nextPattern->update(newPattern);
 }

@@ -126,17 +126,15 @@ unsigned long RadioManager::generateUID() {
 void RadioManager::setMillisOffset(long newOffset) {
 	currentMillisOffset = newOffset;
 
-	singleMan->outputMan()->print(LOG_INFO, F("RadioManager::setMillisOffset:: "));
-	singleMan->outputMan()->print(LOG_INFO, currentMillisOffset);
-
-	if (singleMan->outputMan()->isDebugEnabled()) {
-		singleMan->outputMan()->print(LOG_DEBUG, F("      CurrentTime: "));
-		singleMan->outputMan()->print(LOG_DEBUG, millis());
-		singleMan->outputMan()->print(LOG_DEBUG, F("      AdjustedTime: "));
-		singleMan->outputMan()->print(LOG_DEBUG, getAdjustedMillis());
+	if (singleMan->outputMan()->isLogLevelEnabled(LOG_INFO)) {
+		singleMan->outputMan()->print(LOG_INFO, F("RadioManager::setMillisOffset:: "));
+		singleMan->outputMan()->print(LOG_INFO, currentMillisOffset);
+		singleMan->outputMan()->print(LOG_INFO, F("      CurrentTime: "));
+		singleMan->outputMan()->print(LOG_INFO, millis());
+		singleMan->outputMan()->print(LOG_INFO, F("      AdjustedTime: "));
+		singleMan->outputMan()->print(LOG_INFO, getAdjustedMillis());
+		singleMan->outputMan()->println(LOG_INFO, F(""));
 	}
-
-	singleMan->outputMan()->println(LOG_INFO, F(""));
 }
 
 unsigned long RadioManager::getAdjustedMillis() {
@@ -372,7 +370,7 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
 
-	if(singleMan->outputMan()->isTimingEnabled()) {
+	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer ***"));
 
 		singleMan->outputMan()->print(LOG_TIMING, F("calculateOffset --> VagueTxRxTime: "));
@@ -402,8 +400,8 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
-	if(singleMan->outputMan()->isTimingEnabled()) {
-		singleMan->outputMan()->print(LOG_TIMING, F("t1_t0: "));
+	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
+			singleMan->outputMan()->print(LOG_TIMING, F("t1_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t1_t0);
 		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t3: "));
 		singleMan->outputMan()->print(LOG_TIMING, t2_t3);
@@ -421,7 +419,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
-	if(singleMan->outputMan()->isTimingEnabled()) {
+	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 		singleMan->outputMan()->print(LOG_TIMING, F("t3_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t3_t0);
 		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t1: "));
