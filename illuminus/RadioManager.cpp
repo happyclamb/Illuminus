@@ -163,8 +163,8 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->param4_client_end = millis();
 
-			singleMan->outputMan()->print(LOG_INFO, F("checkRadioForData:true || message_type:"));
-			singleMan->outputMan()->println(LOG_INFO, newMessage->messageType);
+			singleMan->outputMan()->print(LOG_RADIO, F("checkRadioForData   message_type > "));
+			singleMan->outputMan()->println(LOG_RADIO, newMessage->messageType);
 
 			if(pushMessage(newMessage) == false)
 				delete newMessage;
