@@ -52,6 +52,8 @@ class LightManager {
 		bool manual_mode = false;
 		LightPattern* currPattern;
 		LightPattern* nextPattern;
+
+		byte number_patterns_defined = 5;
 		unsigned long pattern_duration = 30000;
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);

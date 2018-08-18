@@ -29,15 +29,6 @@
  #define timing_println(x)
 #endif
 
-const unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
-const unsigned long TIME_BETWEEN_LED_MSGS = 1000;
-#define NEW_ADDRESS_RETRIES 3
-
-#define NTP_OFFSET_SUCCESSES_REQUIRED 7
-#define NTP_OFFSET_SUCCESSES_USED 3
-
-#define LIGHT_PATTERNS_DEFINED 5
-
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging
 // #define serialTX 1		// Used for serial debugging

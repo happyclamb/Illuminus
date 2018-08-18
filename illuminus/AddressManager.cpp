@@ -27,7 +27,6 @@ void AddressManager::setAddress(byte newAddress) {
 	info_println(getZone());
 	info_print(F("Assigned Address: "));
 	info_println(getAddress());
-	delay(5);
 }
 
 byte AddressManager::getAddress() {
@@ -63,20 +62,19 @@ void AddressManager::sendAddressRequest() {
 
 void AddressManager::obtainAddress() {
 
-	for(byte i=0; i<NEW_ADDRESS_RETRIES; i++) {
+	for(byte i=0; i < this->newAddressRetries; i++) {
 		info_print(F("Attempt to get address: "));
 		info_println(i);
-		delay(5);
 
 		sendAddressRequest();
 		if(hasAddress())
 			break;
 
 		// Need to wait long enough for messages to get processed
-		delay(200);
+		delay(250);
 	}
 
-	// if timed out after NEW_ADDRESS_RETRIES tries getting an address then
+	// if timed out after this->newAddressRetries tries getting an address then
 	//	there is no one else so become server
 	if(hasAddress() == false) {
 		setAddress(0);

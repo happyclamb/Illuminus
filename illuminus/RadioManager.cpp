@@ -321,10 +321,11 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 	{
 		offsetCollection[currOffsetIndex] = ntpOffset;
 		currOffsetIndex++;
+
 		// Once there are OFFSET_SUCCESSES offsets, average and set it.
 		if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
 
-			for(int i=1;i<NTP_OFFSET_SUCCESSES_REQUIRED;++i)
+			for(int i=1; i<NTP_OFFSET_SUCCESSES_REQUIRED; ++i)
 			{
 					for(int j=0;j<(NTP_OFFSET_SUCCESSES_REQUIRED-i);++j)
 							if(offsetCollection[j] > offsetCollection[j+1])

@@ -43,6 +43,8 @@ LightManager::LightManager(SingletonManager* _singleMan):
 }
 
 void LightManager::setBigLightBrightness(byte brightness) {
+	info_print(F("setBigLightBrightness:  "));
+	info_println(brightness);
 	analogWrite(BIG_LED_PIN, brightness);
 }
 
@@ -66,7 +68,7 @@ void LightManager::chooseNewPattern() {
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		this->nextPattern->pattern = random(0, LIGHT_PATTERNS_DEFINED);
+		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
 		this->nextPattern->pattern_param1 = random(1, 4);
 		this->nextPattern->pattern_param2 = random(1, 4);
 		this->nextPattern->startTime = currTime + this->pattern_duration;
@@ -150,25 +152,32 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 
 
 	switch(this->currPattern->pattern) {
-		case 0: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
-			5*(currPattern->pattern_param2 - 1), true); break;
-		case 1: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
-			5*(currPattern->pattern_param2 - 1), true); break;
-		case 2: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
-			5*(currPattern->pattern_param2 - 1), true); break;
-		case 3: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
-			5*(currPattern->pattern_param2 - 1), true); break;
-//		case 4: solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
-//			false); break;
-//		case 5: solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
-//			false); break;
-//		case 6: solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
-//			false); break;
-		case 4: solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
-			5*(currPattern->pattern_param2 - 1), false); break;
-
-		case 5: comet(); break;
-		case 6: debugPattern(); break;
+		case 0:
+			debugPattern();
+			break;
+		case 1:
+			solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
+				5*(currPattern->pattern_param2 - 1), true);
+			break;
+		case 2:
+			solidWheelColorChange(PATTERN_TIMING_STAGGER, 20*currPattern->pattern_param1,
+				5*(currPattern->pattern_param2 - 1), true);
+			break;
+		case 3:
+			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, 20*currPattern->pattern_param1,
+				5*(currPattern->pattern_param2 - 1), true);
+			break;
+		case 4:
+			solidWheelColorChange(PATTERN_TIMING_NONE, 20*currPattern->pattern_param1,
+				5*(currPattern->pattern_param2 - 1), true);
+			break;
+		case 5:
+			solidWheelColorChange(PATTERN_TIMING_SYNC, 20*currPattern->pattern_param1,
+				5*(currPattern->pattern_param2 - 1), false);
+			break;
+		case 6:
+			comet();
+			break;
 	}
 }
 

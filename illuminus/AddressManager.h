@@ -25,6 +25,7 @@ class AddressManager
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
 		byte address = 255;
+		byte newAddressRetries = 3;
 
 		void sendAddressRequest();
 };

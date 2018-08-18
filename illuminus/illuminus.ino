@@ -132,7 +132,7 @@ void loop() {
 		sentryLoop(forceNTPCheck);
 
 	static unsigned long lastHealthCheck = 0;
-	if(millis() > lastHealthCheck + TIME_BETWEEN_NTP_MSGS) {
+	if(millis() > lastHealthCheck + singleMan->radioMan()->getIntervalBetweenNTPChecks()) {
 		// Every TIME_BETWEEN_NTP_MSGS lets check the health of the sentries
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
@@ -173,7 +173,7 @@ void serverLoop() {
 				if(bootNTPSequence) {
 					// successfully finished current NTP, force jump to next sentry
 					//	by making the time well before the next check
-					lastNTPCheck = millis() - TIME_BETWEEN_NTP_MSGS - 100;
+					lastNTPCheck = millis() - singleMan->radioMan()->getIntervalBetweenNTPChecks() - 100;
 				}
 				break;
 		}
@@ -182,7 +182,9 @@ void serverLoop() {
 		delete currMessage;
 	}
 
-	if(millis() > lastNTPCheck + TIME_BETWEEN_NTP_MSGS) {
+	// TODO: this needs to use the interval once all the sentries have been called - or
+	//	else as more sentries are added this is going to take a LONG time to sync !!
+	if(millis() > lastNTPCheck + singleMan->radioMan()->getIntervalBetweenNTPChecks()) {
 
 		// always update the server time
 		singleMan->healthMan()->updateSentryNTPRequestTime(0);
@@ -220,7 +222,7 @@ void serverLoop() {
 		}
 	}
 
-	if(millis() > lastLEDUpdateCheck + TIME_BETWEEN_LED_MSGS) {
+	if(millis() > lastLEDUpdateCheck + singleMan->radioMan()->getIntervalBetweenPatternUpdates()) {
 
 		// generate newPatterns for LEDs since the interrupt will do the painting
 		singleMan->lightMan()->chooseNewPattern();
@@ -326,9 +328,7 @@ void sentryLoop(bool forceNTPCheck) {
 	}
 
 	if(ntpState == NTP_WAITING_FOR_RESPONSE) {
-		// lets assume we need 3* the number of requests sent, so each request has that long to timeout.
-		unsigned long ntpRequestTimeout = TIME_BETWEEN_NTP_MSGS / ((unsigned long ) NTP_OFFSET_SUCCESSES_REQUIRED * 3);
-		if(millis() > timeOfLastNTPRequest + ntpRequestTimeout) {
+		if(millis() > timeOfLastNTPRequest + singleMan->radioMan()->ntpRequestTimeout()) {
 			debug_println(F("NTP Request timeout"));
 			// assume that request has timedout and send another
 			ntpState = NTP_SEND_REQUEST;

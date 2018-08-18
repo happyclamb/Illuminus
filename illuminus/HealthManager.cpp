@@ -84,7 +84,7 @@ void HealthManager::checkAllSentryHealth() {
 		// double the amout of time we think the sentry will respond in to give wiggle room
 		unsigned long currTime = millis();
 		unsigned long lastRequest = currNode->health->last_NTP_request_start;
-		unsigned long deathOffset = TIME_BETWEEN_NTP_MSGS * (unsigned long) sentryCount * 2;
+		unsigned long deathOffset = singleMan->radioMan()->getIntervalBetweenNTPChecks() * (unsigned long) sentryCount * 2;
 		unsigned long deadTime = lastRequest + deathOffset;
 
 		if(currTime >= deadTime && currNode->health->isAlive == true) {

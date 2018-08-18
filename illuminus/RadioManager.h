@@ -9,7 +9,9 @@
 #include "SingletonManager.h"
 class SingletonManager;
 
-#define MAX_STORED_MSG_IDS 64
+#define MAX_STORED_MSG_IDS 50
+#define NTP_OFFSET_SUCCESSES_REQUIRED 7
+#define NTP_OFFSET_SUCCESSES_USED 3
 
 class RF24Message
 {
@@ -57,6 +59,12 @@ class RadioManager
 		RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin);
 
 		unsigned long generateUID();
+
+		unsigned long getIntervalBetweenPatternUpdates(){ return TIME_BETWEEN_LED_MSGS; }
+		void setIntervalBetweenPatternUpdates(unsigned long newInterval){ TIME_BETWEEN_LED_MSGS = newInterval; }
+		unsigned long getIntervalBetweenNTPChecks(){ return TIME_BETWEEN_NTP_MSGS; }
+		unsigned long ntpRequestTimeout(){ return NTP_TIMEOUT; }
+
 		unsigned long getAdjustedMillis();
 		void setMillisOffset(long newOffset);
 
@@ -85,6 +93,10 @@ class RadioManager
 		int nextReceivedUIDIndex = 0;
 		int analogSeed = 0;
 		bool informServerWhenNTPDone = true;
+
+		unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
+		unsigned long TIME_BETWEEN_LED_MSGS = 1000;
+		unsigned long NTP_TIMEOUT = 2000;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);
