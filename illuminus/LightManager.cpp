@@ -93,7 +93,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		this->nextPattern->pattern_param4 = random(1, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
-			nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration();
+			(nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration());
 	}
 }
 
