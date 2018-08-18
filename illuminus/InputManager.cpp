@@ -166,8 +166,8 @@ void InputManager::processData(const char * data) {
 			Serial.println(F("ERROR! Can only set interactive mode on master sentry"));
 		}
 	} else if (strcmp(data, "a") == 0) {
-		singleMan->lightMan()->setManualMode(false);
 		singleMan->lightMan()->chooseNewPattern(10);
+		singleMan->lightMan()->setManualMode(false);
 		Serial.println(F("Auto mode set"));
 	} else if (data[0] == 'p') {
 		if(singleMan->lightMan()->getManualMode()) {

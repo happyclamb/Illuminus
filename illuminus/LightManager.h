@@ -76,9 +76,11 @@ class LightManager {
 		void noAddressPattern();
 		void updateLEDArrayFromCurrentPattern();
 		void debugPattern();
+		void solidColor(byte wheelPos);
 		void solidWheelColorChange(LightPatternTimingOptions timingType,
 			int patternSpeed, int brightnessSpeed, bool allLaternLEDs);
 		void comet();
+
 };
 
 #endif // __LIGHTMANAGER_H__

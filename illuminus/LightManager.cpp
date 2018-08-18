@@ -81,7 +81,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		singleMan->outputMan()->println(LOG_DEBUG, F("ChooseNewPattern"));
+		singleMan->outputMan()->print(LOG_DEBUG, F("ChooseNewPattern >"));
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
 		this->nextPattern->pattern_param1 = random(1, 4)*20;
 		this->nextPattern->pattern_param2 = random(0, 3)*5;
@@ -90,6 +90,8 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
 			(nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration());
+
+		this->nextPattern->printPattern(singleMan, LOG_DEBUG);
 	}
 }
 
@@ -190,6 +192,9 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 		case 5:
 			comet();
 			break;
+		case 10:
+			solidColor(currPattern->pattern_param1);
+			break;
 	}
 }
 
@@ -214,6 +219,13 @@ void LightManager::debugPattern() {
 			ledstrip[i] = paramColor;
 		else
 			ledstrip[i] = CRGB(0,0,0);
+	}
+}
+
+void LightManager::solidColor(byte wheelPos) {
+	CRGB newColor = colorFromWheelPosition(wheelPos);
+	for(int i=0; i<NUM_RGB_LEDS; i++) {
+		ledstrip[i] = newColor;
 	}
 }
 

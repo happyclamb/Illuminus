@@ -135,9 +135,6 @@ void loop() {
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
 	}
-
-	// Give a small break before looking messages
-	delay(5);
 }
 
 
@@ -250,7 +247,6 @@ void serverLoop() {
 		lastLEDUpdateCheck = millis();
 	}
 }
-
 
 
 
