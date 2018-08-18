@@ -17,7 +17,7 @@ class LightPattern {
 		LightPattern(){};
 		LightPattern(byte init_pattern, byte init_param1, byte init_param2, unsigned long init_startTime):
 			pattern(init_pattern), pattern_param1(init_param1),pattern_param2(init_param2),startTime(init_startTime){};
-		byte pattern = 0;
+		byte pattern = 1;
 		byte pattern_param1 = 1;
 		byte pattern_param2 = 1;
 		unsigned long startTime = 0;
