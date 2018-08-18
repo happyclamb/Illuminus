@@ -79,19 +79,21 @@ void LightManager::setNextPattern(LightPattern* newPattern, bool forcePrint /*= 
 	this->nextPattern->update(newPattern);
 }
 
-void LightManager::chooseNewPattern() {
+void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/) {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
+		singleMan->outputMan()->println(LOG_DEBUG, F("ChooseNewPattern"));
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
 		this->nextPattern->pattern_param1 = random(1, 4)*20;
 		this->nextPattern->pattern_param2 = random(0, 3)*5;
 		this->nextPattern->pattern_param3 = random(1, 4);
 		this->nextPattern->pattern_param4 = random(1, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
-		this->nextPattern->startTime = currTime + this->getPatternDuration();
+		this->nextPattern->startTime = currTime +
+			nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration();
 	}
 }
 

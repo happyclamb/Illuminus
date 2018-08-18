@@ -154,6 +154,7 @@ void InputManager::processData(const char * data) {
 		}
 	} else if (strcmp(data, "a") == 0) {
 		singleMan->lightMan()->setManualMode(false);
+		singleMan->lightMan()->chooseNewPattern(10);
 		Serial.println(F("Auto mode set"));
 	} else if (data[0] == 'p') {
 		if(singleMan->lightMan()->getManualMode()) {
@@ -168,7 +169,7 @@ void InputManager::processData(const char * data) {
 		singleMan->lightMan()->setBigLightBrightness(bigLedBright);
 	} else if (data[0] == 'd') {
 		unsigned long newDuration = atol(&data[2]);
-		Serial.print(F("Duration between patterns >> "));
+		Serial.print(F("Updated duration between patterns >> "));
 		Serial.println(newDuration);
 		singleMan->lightMan()->setPatternDuration(newDuration);
 	} else if (data[0] == 'l') {
@@ -179,7 +180,7 @@ void InputManager::processData(const char * data) {
 	} else if (data[0] == 'h') {
 		singleMan->healthMan()->printHealth(true);
 	} else {
-		Serial.print(F("process_data >> "));
+		Serial.print(F("UNKNOWN COMMAND >> "));
 		Serial.println(data);
 	}
 }

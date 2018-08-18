@@ -77,6 +77,10 @@ void AddressManager::obtainAddress() {
 	// if timed out after this->newAddressRetries tries getting an address then
 	//	there is no one else so become server
 	if(hasAddress() == false) {
+		// Force a new pattern to ensure all pattern params have a sane default
+		singleMan->lightMan()->chooseNewPattern(10);
+
+		// Now set address as it will use the newly inited pattern
 		setAddress(0);
 	}
 }

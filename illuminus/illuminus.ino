@@ -43,8 +43,8 @@ void setup() {
 	init_TIMER1_irq();
 
 	singleMan->outputMan()->println(LOG_INFO, F("Info Logging enabled"));
-	singleMan->outputMan()->println(LOG_DEBUG, F("Info Logging enabled"));
-	singleMan->outputMan()->println(LOG_TIMING, F("Info Logging enabled"));
+	singleMan->outputMan()->println(LOG_DEBUG, F("Debug Logging enabled"));
+	singleMan->outputMan()->println(LOG_TIMING, F("Timing Logging enabled"));
 
 	singleMan->outputMan()->print(LOG_INFO, F("Setup complete; Zone: "));
 	singleMan->outputMan()->println(LOG_INFO, singleMan->addrMan()->getZone());

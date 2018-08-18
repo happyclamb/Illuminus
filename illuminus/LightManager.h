@@ -20,12 +20,12 @@ class LightPattern {
 			pattern(init_pattern), pattern_param1(init_param1), pattern_param2(init_param2), pattern_param3(init_param3),
 			pattern_param4(init_param4), pattern_param5(init_param5), startTime(init_startTime){};
 
-		byte pattern = 1;
-		byte pattern_param1 = 1;
-		byte pattern_param2 = 1;
-		byte pattern_param3 = 1;
-		byte pattern_param4 = 1;
-		byte pattern_param5 = 1;
+		byte pattern = 0;
+		byte pattern_param1 = 0;
+		byte pattern_param2 = 0;
+		byte pattern_param3 = 0;
+		byte pattern_param4 = 0;
+		byte pattern_param5 = 0;
 
 		unsigned long startTime = 0;
 
@@ -54,7 +54,7 @@ class LightManager {
 		LightPattern* getNextPattern();
 		void setNextPattern(LightPattern* newPattern, bool forcePrint = false);
 
-		void chooseNewPattern(); // called from server
+		void chooseNewPattern(unsigned long nextPatternTimeOffset = 0); // called from server
 		void redrawLights(); // called from interrupt handler
 
 	private:
