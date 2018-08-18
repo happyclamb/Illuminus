@@ -31,7 +31,7 @@ class HealthManager
 		SentryHealth* findSentry(byte id);
 		void checkAllSentryHealth();
 		void selectNewServer();
-		void printHealth();
+		void printHealth(bool forcePrint = false);
 
 	private:
 		SingletonManager* singleMan = NULL;

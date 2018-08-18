@@ -94,6 +94,7 @@ void InputManager::showOptions() {
 	Serial.println(F("l ###            toggle log level [info|debug|timing]"));
 	Serial.println(F("p ### ### ###    select a pattern along with parameters to pass"));
 	Serial.println(F("b ###            select a brightness of big LED"));
+	Serial.println(F("h                shows current health of lanterns in network"));
 	Serial.println(F(""));
 }
 
@@ -163,6 +164,8 @@ void InputManager::processData(const char * data) {
 			this->showLogLevels();
 		else
 			this->setLogLevel(&data[2]);
+	} else if (data[0] == 'h') {
+		singleMan->healthMan()->printHealth(true);
 	} else {
 		Serial.print(F("process_data >> "));
 		Serial.println(data);

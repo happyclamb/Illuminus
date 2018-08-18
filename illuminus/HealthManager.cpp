@@ -174,34 +174,39 @@ void HealthManager::pruneEndSentries() {
 	}
 }
 
-void HealthManager::printHealth() {
-	return;
+void HealthManager::printHealth(bool forcePrint /*= false*/) {
 
-	SentryHealthNode *currNode = this->healthQueue;
-	if (singleMan->outputMan()->isDebugEnabled()) {
-		singleMan->outputMan()->print(LOG_DEBUG, F("-------HealthManager::printHealth   currTime> "));
+	bool origDebugValue = singleMan->outputMan()->isDebugEnabled();
+
+	if (origDebugValue || forcePrint) {
+		singleMan->outputMan()->setDebugEnabled(true);
+
+		SentryHealthNode *currNode = this->healthQueue;
+		singleMan->outputMan()->print(LOG_DEBUG, F("-------HealthManager   currTime> "));
 		singleMan->outputMan()->print(LOG_DEBUG, millis());
 		singleMan->outputMan()->print(LOG_DEBUG, F("   sentryCount> "));
 		singleMan->outputMan()->println(LOG_DEBUG, sentryCount);
-	}
 
-	byte i=0;
-	while(currNode != NULL) {
-		if (singleMan->outputMan()->isDebugEnabled()) {
-			singleMan->outputMan()->print(LOG_DEBUG, F("   index:"));
-			singleMan->outputMan()->print(LOG_DEBUG, i);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  id:"));
-			singleMan->outputMan()->print(LOG_DEBUG, currNode->health->id);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  isAlive:"));
-			singleMan->outputMan()->print(LOG_DEBUG, currNode->health->isAlive);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  lastRequest:"));
-			singleMan->outputMan()->println(LOG_DEBUG, currNode->health->last_NTP_request_start);
+		byte i=0;
+		while(currNode != NULL) {
+			if (singleMan->outputMan()->isDebugEnabled()) {
+				singleMan->outputMan()->print(LOG_DEBUG, F("   index:"));
+				singleMan->outputMan()->print(LOG_DEBUG, i);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  id:"));
+				singleMan->outputMan()->print(LOG_DEBUG, currNode->health->id);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  isAlive:"));
+				singleMan->outputMan()->print(LOG_DEBUG, currNode->health->isAlive);
+				singleMan->outputMan()->print(LOG_DEBUG, F("  lastRequest:"));
+				singleMan->outputMan()->println(LOG_DEBUG, currNode->health->last_NTP_request_start);
+			}
+
+			i++;
+			currNode = currNode->next;
 		}
+		singleMan->outputMan()->println(LOG_DEBUG, F("---------------------"));
 
-		i++;
-		currNode = currNode->next;
+		singleMan->outputMan()->setDebugEnabled(origDebugValue);
 	}
-	singleMan->outputMan()->println(LOG_DEBUG, F("---------------------"));
 }
 
 SentryHealth* HealthManager::addSentry(byte newID) {
