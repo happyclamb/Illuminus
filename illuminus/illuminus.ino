@@ -136,13 +136,14 @@ void serverLoop() {
 	static unsigned long lastNTPCoordMessage = 0;
 	static unsigned long lastLEDUpdateCheck = 0;
 
+	// always update the server time
+	singleMan->healthMan()->updateSentryHealthTime(0, millis(), millis());
+
 	// Collect and handle any messages in the queue
 	singleMan->radioMan()->checkRadioForData();
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 	if(currMessage != NULL)
 	{
-		// always update the server time
-		singleMan->healthMan()->updateSentryHealthTime(0, millis(), millis());
 		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());
 
 		switch(currMessage->messageType) {

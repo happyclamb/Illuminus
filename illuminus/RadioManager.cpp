@@ -154,8 +154,12 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->param4_client_end = millis();
 
-			singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
-			this->printMessage(LOG_RADIO, *newMessage);
+			if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
+				|| newMessage->sentryTargetID == 255)
+			{
+				singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
+				this->printMessage(LOG_RADIO, *newMessage);
+			}
 
 			if(pushMessage(newMessage) == false)
 				delete newMessage;
@@ -229,10 +233,6 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 		}
 	}
 
-//	if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()) {
-	singleMan->outputMan()->print(LOG_RADIO, F("Pushed Message "));
-	this->printMessage(LOG_RADIO, *newMessage);
-
 	if(this->messageQueue == NULL)
 	{
 		this->messageQueue = new MessageNode();
@@ -288,6 +288,9 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 		byte currentZone = singleMan->addrMan()->getZone();
 
+		singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
+		this->printMessage(LOG_RADIO, messageToSend);
+
 		rf24.stopListening();
 
 		rf24.closeReadingPipe(1);
@@ -308,9 +311,6 @@ void RadioManager::sendMessage(RF24Message messageToSend) {
 		// Sending messages requires a new UID; but don't want
 		//	to change UID when echoing!
 		messageToSend.UID = generateUID();
-
-		singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
-		this->printMessage(LOG_RADIO, messageToSend);
 
 		internalSendMessage(messageToSend);
 }
