@@ -51,7 +51,8 @@ class MessageNode {
 enum NTP_state {
 			NTP_DONE,
 			NTP_WAITING_FOR_RESPONSE,
-			NTP_SEND_REQUEST };
+			NTP_SEND_REQUEST
+};
 
 class RadioManager
 {
@@ -60,22 +61,23 @@ class RadioManager
 
 		unsigned long generateUID();
 
-		unsigned long getIntervalBetweenPatternUpdates(){ return TIME_BETWEEN_LED_MSGS; }
+		unsigned long getIntervalBetweenPatternUpdates(){ return this->TIME_BETWEEN_LED_MSGS; }
 		void setIntervalBetweenPatternUpdates(unsigned long newInterval){ TIME_BETWEEN_LED_MSGS = newInterval; }
-		unsigned long getIntervalBetweenNTPChecks(){ return TIME_BETWEEN_NTP_MSGS; }
-		unsigned long ntpRequestTimeout(){ return NTP_TIMEOUT; }
+		unsigned long getIntervalBetweenNTPChecks(){ return this->TIME_BETWEEN_NTP_MSGS; }
+		unsigned long ntpRequestTimeout(){ return this->NTP_TIMEOUT; }
 
 		unsigned long getAdjustedMillis();
 		void setMillisOffset(long newOffset);
 
 		bool checkRadioForData();
+		RF24Message* peekMessage();
 		RF24Message* popMessage();
 		bool checkForInterference();
 
 		void sendMessage(RF24Message messageToSend);
 		void echoMessage(RF24Message messageToEcho);
+		void printMessage(OUTPUT_LOG_TYPES log_level, RF24Message message);
 
-		bool setInformServerWhenNTPDone(bool newValue);
 		NTP_state sendNTPRequestToServer();
 		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
 		void handleNTPClientRequest(RF24Message* ntpMessage);
@@ -91,12 +93,10 @@ class RadioManager
 		int nextSentUIDIndex = 0;
 		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
 		int nextReceivedUIDIndex = 0;
-		int analogSeed = 0;
-		bool informServerWhenNTPDone = true;
 
-		unsigned long TIME_BETWEEN_LED_MSGS = 1000;
+		unsigned long TIME_BETWEEN_LED_MSGS = 5000;
 		unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
-		unsigned long NTP_TIMEOUT = 5000;
+		unsigned long NTP_TIMEOUT = 2000;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);

@@ -31,7 +31,7 @@ class LightPattern {
 		unsigned long startTime = 0;
 
 		void update(LightPattern* newPattern);
-		void printPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level);
+		void printlnPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level);
 };
 
 enum LightPatternTimingOptions {

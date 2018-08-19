@@ -19,7 +19,7 @@ void LightPattern::update(LightPattern* newPattern) {
 	this->startTime = newPattern->startTime;
 }
 
-void LightPattern::printPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level)  {
+void LightPattern::printlnPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level)  {
 	if (singleMan->outputMan()->isLogLevelEnabled(log_level)) {
 		singleMan->outputMan()->print(log_level, F("pattern: "));
 		singleMan->outputMan()->print(log_level, this->pattern);
@@ -34,7 +34,7 @@ void LightPattern::printPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES lo
 		singleMan->outputMan()->print(log_level, F("      pattern_param5: "));
 		singleMan->outputMan()->print(log_level, this->pattern_param5);
 		singleMan->outputMan()->print(log_level, F("      startTime: "));
-		singleMan->outputMan()->print(log_level, this->startTime);
+		singleMan->outputMan()->println(log_level, this->startTime);
 	}
 }
 
@@ -70,7 +70,7 @@ LightPattern* LightManager::getNextPattern() {
 // NextPattern is passed to Sentries via radio messages
 void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level) {
 	singleMan->outputMan()->println(log_level, F("Setting Next Pattern"));
-	newPattern->printPattern(singleMan, log_level);
+	newPattern->printlnPattern(singleMan, log_level);
 
 	this->nextPattern->update(newPattern);
 }
@@ -81,7 +81,6 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		singleMan->outputMan()->print(LOG_DEBUG, F("ChooseNewPattern >"));
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
 		this->nextPattern->pattern_param1 = random(1, 4)*20;
 		this->nextPattern->pattern_param2 = random(0, 3)*5;
@@ -91,7 +90,8 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		this->nextPattern->startTime = currTime +
 			(nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration());
 
-		this->nextPattern->printPattern(singleMan, LOG_DEBUG);
+		singleMan->outputMan()->print(LOG_DEBUG, F("ChooseNewPattern >"));
+		this->nextPattern->printlnPattern(singleMan, LOG_DEBUG);
 	}
 }
 
