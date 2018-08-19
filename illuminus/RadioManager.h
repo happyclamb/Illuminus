@@ -94,9 +94,9 @@ class RadioManager
 		int analogSeed = 0;
 		bool informServerWhenNTPDone = true;
 
-		unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
 		unsigned long TIME_BETWEEN_LED_MSGS = 1000;
-		unsigned long NTP_TIMEOUT = 2000;
+		unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
+		unsigned long NTP_TIMEOUT = 5000;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);

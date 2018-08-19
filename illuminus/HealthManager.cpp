@@ -71,8 +71,6 @@ byte HealthManager::nextAvailSentryID() {
 	// set the time to create the Node in the array
 	updateSentryNTPRequestTime(nextID);
 
-	printHealth(LOG_INFO);
-
 	return nextID;
 }
 
@@ -178,7 +176,8 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 
 	if (singleMan->outputMan()->isLogLevelEnabled(log_level)) {
 		SentryHealthNode *currNode = this->healthQueue;
-		singleMan->outputMan()->print(log_level, F("------- HealthManager    currTime > "));
+		singleMan->outputMan()->println(log_level, F("------- HealthManager -------"));
+		singleMan->outputMan()->print(log_level, F("currTime > "));
 		singleMan->outputMan()->print(log_level, millis());
 		singleMan->outputMan()->print(log_level, F("    adjustedTime > "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->getAdjustedMillis());
@@ -186,6 +185,10 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->print(log_level, sentryCount);
 		singleMan->outputMan()->print(log_level, F("    this.address > "));
 		singleMan->outputMan()->println(log_level, singleMan->addrMan()->getAddress());
+
+		singleMan->outputMan()->print(log_level, F("nextPattern > "));
+		singleMan->lightMan()->getNextPattern()->printPattern(singleMan, log_level);
+		singleMan->outputMan()->println(log_level, F(""));
 
 		byte i=0;
 		while(currNode != NULL) {
@@ -199,7 +202,7 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 			i++;
 			currNode = currNode->next;
 		}
-		singleMan->outputMan()->println(log_level, F("---------------------"));
+		singleMan->outputMan()->println(log_level, F("----------------------------"));
 	}
 }
 

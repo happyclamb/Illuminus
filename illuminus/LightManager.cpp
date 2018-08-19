@@ -133,6 +133,29 @@ void LightManager::colorFromWheelPosition(byte wheelPos,
 	*b = (brightness * (float)*b);
 }
 
+float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
+	float cosBright = 1.0;
+	if(brightnessSpeed > 0) {
+			/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
+			cos(0) == 1
+			cos(3.14) == -1
+			cos(6.28) == 1
+			*/
+		int totalBrightSteps = 314;
+		int brightnessAngleIndex = (currTime%(totalBrightSteps*brightnessSpeed))/brightnessSpeed;
+		cosBright = cos(brightnessAngleIndex/50.0) + 1.0;
+
+		// Now the range is from 0.0 -> 2.0
+		// Lets scale it
+		//	0.33 -> 1.0    cosBright/3.0 + 0.33
+		//	0.25 -> 1.0    cosBright/2.6 + 0.25
+		//	0.20 -> 1.0    cosBright/2.5 + 0.20
+		cosBright = cosBright/2.5 + 0.20;
+	}
+
+	return cosBright;
+}
+
 //*********
 //*********  Everything from here forward runs on interrupt !! *******
 //*********
@@ -189,11 +212,15 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 			solidWheelColorChange(PATTERN_TIMING_NONE, currPattern->pattern_param1,
 				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
-		case 5:
-			comet();
-			break;
 		case 10:
 			solidColor(currPattern->pattern_param1);
+			break;
+		case 11:
+			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
+				currPattern->pattern_param3);
+			break;
+		case 99:
+			comet(currPattern->pattern_param1);
 			break;
 	}
 }
@@ -229,6 +256,8 @@ void LightManager::solidColor(byte wheelPos) {
 	}
 }
 
+
+
 // Treat all 6 LEDs as 1 solid colour, default pattern look is to have all
 //  the lanterns showing exactly the same pattern PATTERN_TIMING_SYNC
 //	if (allLaternLEDs) then make all 6 LEDs the same
@@ -242,26 +271,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 	else
 		currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	/*	brightnessFade */
-	float cosBright = 1.0;
-	if(brightnessSpeed > 0) {
-			/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
-			cos(0) == 1
-			cos(3.14) == -1
-			cos(6.28) == 1
-			*/
-		int totalBrightSteps = 314;
-		int brightnessAngleIndex = (currTime%(totalBrightSteps*brightnessSpeed))/brightnessSpeed;
-		cosBright = cos(brightnessAngleIndex/50.0) + 1.0;
-
-		// Now the range is from 0.0 -> 2.0
-		// Lets scale it
-		//	0.33 -> 1.0    cosBright/3.0 + 0.33
-		//	0.25 -> 1.0    cosBright/2.6 + 0.25
-		//	0.20 -> 1.0    cosBright/2.5 + 0.20
-		cosBright = cosBright/2.5 + 0.20;
-	}
-
+	float brightnessFloat = this->cosFade(currTime, brightnessSpeed);
 	byte colorTimeBetweenSteps = patternSpeed;
 	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
@@ -280,28 +290,47 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 	for(int i=0; i<NUM_RGB_LEDS; i++) {
 		byte nextStep = baseWheel;
 		if(allLaternLEDs == false)
-			nextStep += (offsetForLanternLeds/2) + (i*offsetForLanternLeds);
+			nextStep += (i*offsetForLanternLeds);
 
-		ledstrip[i] = colorFromWheelPosition(nextStep, cosBright);
+		ledstrip[i] = colorFromWheelPosition(nextStep, brightnessFloat);
 	}
 }
 
-#define COMET_SPEED 750
-void LightManager::comet()
+// Walk through all the sentries and for each lantern choose a color
+void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground) {
+	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
+	float brightnessFloat = this->cosFade(currTime, brightnessSpeed);
+
+	unsigned long colorTimeBetweenSteps = patternSpeed*10;
+	unsigned long totalSteps = singleMan->healthMan()->totalSentries();
+	byte currStep = (currTime%(totalSteps*colorTimeBetweenSteps))/colorTimeBetweenSteps;
+
+	int bgColorComponent = brightnessFloat * (float)initialBackground;
+	CRGB background = CRGB(bgColorComponent, bgColorComponent, bgColorComponent);
+
+	bool isMe = singleMan->addrMan()->getAddress() == currStep;
+	static CRGB standout;
+	if(!isMe) standout = colorFromWheelPosition(random(0, COLOR_STEPS_IN_WHEEL));
+
+	for(int i=0; i<NUM_RGB_LEDS; i++) {
+		ledstrip[i] = isMe ? standout : background;
+	}
+}
+
+void LightManager::comet(byte cometSpeed)
 {
 	// Want to dim each light from 255->0   over (~255ms*2)
 	// Light moves at about 255ms / light. == MOVE_SPEED
 	// 8 lights * 255 + 1 segent of all black + 2 segment final fade ==  (NUMBER_SENTRIES + 3) * MOVE_SPEED
-
 	byte numberOfSteps = singleMan->healthMan()->totalSentries() + 3; // 1 blank extra and 2 fades
-	unsigned long totalPatternTime = numberOfSteps * COMET_SPEED;
+	unsigned long totalPatternTime = numberOfSteps * cometSpeed;
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	byte currentPatternSegment = (currTime % totalPatternTime)/COMET_SPEED;
+	byte currentPatternSegment = (currTime % totalPatternTime)/(unsigned long)cometSpeed;
 
-	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * COMET_SPEED);
+	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * cometSpeed);
 
 	byte numberOfColorDecreaseSteps = 85;
-	byte brightnessLevel = ((COMET_SPEED-timeIntoASegment)*numberOfColorDecreaseSteps)/COMET_SPEED;
+	byte brightnessLevel = ((cometSpeed-timeIntoASegment)*numberOfColorDecreaseSteps)/cometSpeed;
 
 	byte address = singleMan->addrMan()->getAddress();
 	if(currentPatternSegment == (address+1))

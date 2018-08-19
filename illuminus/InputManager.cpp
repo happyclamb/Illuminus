@@ -155,17 +155,17 @@ void InputManager::setLogLevel(const char * data){
 // process incoming serial data after a terminator received
 void InputManager::processData(const char * data) {
 
-	if (strcmp(data, "?") == 0 || strcmp(data, "help") == 0) {
+	if ((data[0] == '?') || strcmp(data, "help") == 0) {
 		this->showOptions();
 	}
-	else if (strcmp(data, "i") == 0) {
+	else if (data[0] == 'i') {
 		if(singleMan->addrMan()->getAddress() == 0)  {
 			singleMan->lightMan()->setManualMode(true);
 			Serial.println(F("Interactive mode set"));
 		} else {
 			Serial.println(F("ERROR! Can only set interactive mode on master sentry"));
 		}
-	} else if (strcmp(data, "a") == 0) {
+	} else if (data[0] == 'a') {
 		singleMan->lightMan()->chooseNewPattern(10);
 		singleMan->lightMan()->setManualMode(false);
 		Serial.println(F("Auto mode set"));
