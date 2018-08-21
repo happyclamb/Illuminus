@@ -41,7 +41,7 @@ class HealthManager
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
 		byte sentryCount = 0;
-		unsigned long deathOffset = 60000;
+		unsigned long deathOffset = 120000;
 
 		void pruneEndSentries();
 		SentryHealth* addSentry(byte newID);

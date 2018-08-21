@@ -2,6 +2,7 @@
 
 #include "IlluminusDefs.h"
 #include "SingletonManager.h"
+#include "RadioManager.h"
 
 AddressManager::AddressManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
@@ -47,7 +48,6 @@ void AddressManager::sendAddressRequest() {
 	while(hasAddress() == false &&
 		millis() < (requestStart + singleMan->radioMan()->ntpRequestTimeout()))
 	{
-		delay(5);
 		singleMan->radioMan()->checkRadioForData();
 
 		// Peeking because later we'll want to process collected messages
@@ -62,8 +62,8 @@ void AddressManager::sendAddressRequest() {
 void AddressManager::obtainAddress() {
 
 	for(byte i=0; i < this->newAddressRetries; i++) {
-		singleMan->outputMan()->print(LOG_INFO, F("Attempt to get address: "));
-		singleMan->outputMan()->println(LOG_INFO, i);
+		singleMan->outputMan()->print(LOG_CLI, F("Attempt to get address: "));
+		singleMan->outputMan()->println(LOG_CLI, i);
 
 		sendAddressRequest();
 		if(hasAddress())
@@ -82,14 +82,13 @@ void AddressManager::obtainAddress() {
 }
 
 
-void AddressManager::sendNewAddressResponse() {
+void AddressManager::sendNewAddressResponse(RF24Message* addressResponseMessage) {
 	byte targetSentry = singleMan->healthMan()->nextAvailSentryID();
 
-	RF24Message addressResponseMessage;
-	addressResponseMessage.messageType = NEW_ADDRESS_RESPONSE;
-	addressResponseMessage.sentrySrcID = 0;
-	addressResponseMessage.sentryTargetID = 255;
-	addressResponseMessage.param1_byte = targetSentry;
+	addressResponseMessage->messageType = NEW_ADDRESS_RESPONSE;
+	addressResponseMessage->sentrySrcID = 0;
+	addressResponseMessage->sentryTargetID = 255;
+	addressResponseMessage->param1_byte = targetSentry;
 
-	singleMan->radioMan()->sendMessage(addressResponseMessage);
+	singleMan->radioMan()->sendMessage(*addressResponseMessage);
 }

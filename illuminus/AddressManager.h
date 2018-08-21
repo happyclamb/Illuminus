@@ -4,6 +4,9 @@
 #include <Arduino.h>
 #include "IlluminusDefs.h"
 
+#include "RadioManager.h"
+class RF24Message;
+
 #include "SingletonManager.h"
 class SingletonManager;
 
@@ -19,13 +22,13 @@ class AddressManager
 		void setAddress(byte newAddress);
 
 		void obtainAddress();
-		void sendNewAddressResponse();
+		void sendNewAddressResponse(RF24Message* addressResponseMessage);
 
 	private:
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
 		byte address = 255;
-		byte newAddressRetries = 3;
+		byte newAddressRetries = 5;
 
 		void sendAddressRequest();
 };

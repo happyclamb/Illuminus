@@ -122,9 +122,12 @@ void loop() {
 	else
 		sentryLoop();
 
+	// Every IntervalBetweenNTPChecks, check the health of the sentries
 	static unsigned long lastHealthCheck = 0;
-	if(millis() > (lastHealthCheck + singleMan->radioMan()->getIntervalBetweenNTPChecks())) {
-		// Every IntervalBetweenNTPChecks, check the health of the sentries
+	if(millis() > (lastHealthCheck + singleMan->radioMan()->getIntervalBroadcastMessages())) {
+
+		// always update the local health
+		singleMan->healthMan()->updateSentryHealthTime(singleMan->addrMan()->getAddress(), millis(), millis());
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
 	}
@@ -133,22 +136,20 @@ void loop() {
 
 
 void serverLoop() {
-	static unsigned long lastNTPCoordMessage = 0;
-	static unsigned long lastLEDUpdateCheck = 0;
-
-	// always update the server time
-	singleMan->healthMan()->updateSentryHealthTime(0, millis(), millis());
+	static unsigned long lastMessage = 0;
+	static Radio_Message_Type nextType = NTP_COORD_MESSAGE;
 
 	// Collect and handle any messages in the queue
 	singleMan->radioMan()->checkRadioForData();
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
+
 	if(currMessage != NULL)
 	{
 		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());
 
 		switch(currMessage->messageType) {
 			case NEW_ADDRESS_REQUEST:
-				singleMan->addrMan()->sendNewAddressResponse();
+				singleMan->addrMan()->sendNewAddressResponse(currMessage);
 				break;
 			case NTP_CLIENT_REQUEST:
 				singleMan->radioMan()->handleNTPClientRequest(currMessage);
@@ -172,52 +173,56 @@ void serverLoop() {
 
 	// Only send more coord messages if not in the middle ... or a long time has rolled by
 	//	because the sentry died during the coord check.
-	if(millis() > (lastNTPCoordMessage + singleMan->radioMan()->getIntervalBetweenNTPChecks()))
+	if(millis() > (lastMessage + singleMan->radioMan()->getIntervalBroadcastMessages()))
 	{
-		// If there is only one sentry, don't bother sending anything NTP_COORD_MESSAGES
-		if(singleMan->healthMan()->totalSentries() > 1) {
+		lastMessage = millis();
 
-			int nextSentryToRunNTP = singleMan->healthMan()->getOldestNTPRequest();
+		switch (nextType) {
+			case NTP_COORD_MESSAGE:
+				// If there is only one sentry, don't bother sending anything NTP_COORD_MESSAGES
+				if(singleMan->healthMan()->totalSentries() > 1) {
 
-			// Fire off a message to the next sentry to run an NTPloop
-			RF24Message ntpStartMessage;
-			ntpStartMessage.messageType = NTP_COORD_MESSAGE;
-			ntpStartMessage.sentrySrcID = 0;
-			ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
+					int nextSentryToRunNTP = singleMan->healthMan()->getOldestNTPRequest();
 
-			singleMan->radioMan()->sendMessage(ntpStartMessage);
+					// Fire off a message to the next sentry to run an NTPloop
+					RF24Message ntpStartMessage;
+					ntpStartMessage.messageType = NTP_COORD_MESSAGE;
+					ntpStartMessage.sentrySrcID = 0;
+					ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
 
-			lastNTPCoordMessage = millis();
+					singleMan->radioMan()->sendMessage(ntpStartMessage);
+				}
+				nextType = COLOR_MESSAGE_TO_SENTRY;
+				break;
+
+			case COLOR_MESSAGE_TO_SENTRY:
+				// generate newPatterns for LEDs since the interrupt will do the painting
+				singleMan->lightMan()->chooseNewPattern();
+
+				// This is a pointer to the original, don't delete it.
+				LightPattern* nextPattern = singleMan->lightMan()->getNextPattern();
+
+				// send color updates
+				RF24Message lightMessage;
+				lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
+				lightMessage.sentrySrcID = 0;
+				lightMessage.sentryTargetID = 255;
+				lightMessage.param1_byte = nextPattern->pattern;
+				lightMessage.param2_byte = nextPattern->pattern_param1;
+				lightMessage.param3_byte = nextPattern->pattern_param2;
+				lightMessage.param4_client_end = nextPattern->pattern_param3;
+				lightMessage.param5_client_start = nextPattern->pattern_param4;
+				lightMessage.param6_server_end = nextPattern->pattern_param5;
+				lightMessage.param7_server_start = nextPattern->startTime;
+
+				singleMan->radioMan()->sendMessage(lightMessage);
+				nextPattern->printlnPattern(singleMan, LOG_RADIO);
+
+				nextType = NTP_COORD_MESSAGE;
+				break;
 		}
 	}
 
-	if(millis() > (lastLEDUpdateCheck + singleMan->radioMan()->getIntervalBetweenPatternUpdates())) {
-
-		// generate newPatterns for LEDs since the interrupt will do the painting
-		singleMan->lightMan()->chooseNewPattern();
-
-		// This is a pointer to the original, don't delete it.
-		LightPattern* nextPattern = singleMan->lightMan()->getNextPattern();
-
-		// send color updates
-		RF24Message lightMessage;
-		lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
-		lightMessage.sentrySrcID = 0;
-		lightMessage.sentryTargetID = 255;
-		lightMessage.param1_byte = nextPattern->pattern;
-		lightMessage.param2_byte = nextPattern->pattern_param1;
-		lightMessage.param3_byte = nextPattern->pattern_param2;
-		lightMessage.param4_client_end = nextPattern->pattern_param3;
-		lightMessage.param5_client_start = nextPattern->pattern_param4;
-		lightMessage.param6_server_end = nextPattern->pattern_param5;
-		lightMessage.param7_server_start = nextPattern->startTime;
-
-		singleMan->radioMan()->sendMessage(lightMessage);
-		nextPattern->printlnPattern(singleMan, LOG_RADIO);
-
-		// Update lastLEDUpdateCheck
-		lastLEDUpdateCheck = millis();
-	}
 }
 
 
@@ -289,6 +294,10 @@ void sentryLoop() {
 				responseMessage.messageType = COLOR_MESSAGE_FROM_SENTRY;
 				responseMessage.sentryTargetID = 0;
 				responseMessage.sentrySrcID = singleMan->addrMan()->getAddress();
+				responseMessage.param4_client_end = currMessage->UID;
+				responseMessage.param5_client_start = currMessage->UID;
+				responseMessage.param6_server_end = currMessage->UID;
+				responseMessage.param7_server_start = currMessage->UID;
 				singleMan->radioMan()->sendMessage(responseMessage);
 
 				break;

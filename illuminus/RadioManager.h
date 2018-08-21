@@ -33,14 +33,15 @@ class RF24Message
 };
 
 enum Radio_Message_Type {
-			NEW_ADDRESS_REQUEST,
-			NEW_ADDRESS_RESPONSE,
-			NTP_COORD_MESSAGE,
-			NTP_CLIENT_REQUEST,
-			NTP_SERVER_RESPONSE,
-			NTP_CLIENT_FINISHED,
-			COLOR_MESSAGE_TO_SENTRY,
-			COLOR_MESSAGE_FROM_SENTRY };
+	NEW_ADDRESS_REQUEST,
+	NEW_ADDRESS_RESPONSE,
+	NTP_COORD_MESSAGE,
+	NTP_CLIENT_REQUEST,
+	NTP_SERVER_RESPONSE,
+	NTP_CLIENT_FINISHED,
+	COLOR_MESSAGE_TO_SENTRY,
+	COLOR_MESSAGE_FROM_SENTRY
+};
 
 class MessageNode {
 	public:
@@ -49,9 +50,9 @@ class MessageNode {
 };
 
 enum NTP_state {
-			NTP_DONE,
-			NTP_WAITING_FOR_RESPONSE,
-			NTP_SEND_REQUEST
+	NTP_DONE,
+	NTP_WAITING_FOR_RESPONSE,
+	NTP_SEND_REQUEST
 };
 
 class RadioManager
@@ -61,10 +62,10 @@ class RadioManager
 
 		unsigned long generateUID();
 
-		unsigned long getIntervalBetweenPatternUpdates(){ return this->TIME_BETWEEN_LED_MSGS; }
-		void setIntervalBetweenPatternUpdates(unsigned long newInterval){ TIME_BETWEEN_LED_MSGS = newInterval; }
-		unsigned long getIntervalBetweenNTPChecks(){ return this->TIME_BETWEEN_NTP_MSGS; }
-		unsigned long ntpRequestTimeout(){ return this->NTP_TIMEOUT; }
+		unsigned long getIntervalBroadcastMessages(){ return this->INTERVAL_BETWEEN_MSGS; }
+		void setIntervalBroadcastMessages(unsigned long newInterval){ this->INTERVAL_BETWEEN_MSGS = newInterval; }
+
+		unsigned long ntpRequestTimeout(){ return this->NTP_REQUEST_TIMEOUT; }
 
 		unsigned long getAdjustedMillis();
 		void setMillisOffset(long newOffset);
@@ -76,7 +77,7 @@ class RadioManager
 
 		void sendMessage(RF24Message messageToSend);
 		void echoMessage(RF24Message messageToEcho);
-		void printMessage(OUTPUT_LOG_TYPES log_level, RF24Message message);
+		void printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message message);
 
 		NTP_state sendNTPRequestToServer();
 		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
@@ -86,17 +87,18 @@ class RadioManager
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		uint64_t pipeAddresses[4][2];
+		uint64_t pipeAddresses[4][3];
 
 		MessageNode* messageQueue = NULL;
-		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
-		int nextSentUIDIndex = 0;
-		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
-		int nextReceivedUIDIndex = 0;
 
-		unsigned long TIME_BETWEEN_LED_MSGS = 5000;
-		unsigned long TIME_BETWEEN_NTP_MSGS = 10000;
-		unsigned long NTP_TIMEOUT = 2000;
+		unsigned long sentUIDs[MAX_STORED_MSG_IDS];
+		byte nextSentUIDIndex = 0;
+		unsigned long receivedUIDs[MAX_STORED_MSG_IDS];
+		byte nextReceivedUIDIndex = 0;
+
+		unsigned long INTERVAL_BETWEEN_MSGS = 10000;
+		unsigned long NTP_REQUEST_TIMEOUT = 2500;
+		byte RADIO_SEND_DELAY = 10;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);

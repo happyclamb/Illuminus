@@ -188,9 +188,9 @@ void InputManager::processData(const char * data) {
 		singleMan->lightMan()->setPatternDuration(newDuration);
 	} else if (data[0] == 'f') {
 		unsigned long newFrequency = atol(&data[2]);
-		Serial.print(F("Updated frequency between color updates >> "));
+		Serial.print(F("Updated frequency between broadcast updates >> "));
 		Serial.println(newFrequency);
-		singleMan->radioMan()->setIntervalBetweenPatternUpdates(newFrequency);
+		singleMan->radioMan()->setIntervalBroadcastMessages(newFrequency);
 	} else if (data[0] == 'l') {
 		if(strlen(data) == 1)
 			this->showLogLevels();
