@@ -143,8 +143,7 @@ void RadioManager::setMillisOffset(long newOffset) {
 		singleMan->outputMan()->print(LOG_INFO, F("      CurrentTime: "));
 		singleMan->outputMan()->print(LOG_INFO, millis());
 		singleMan->outputMan()->print(LOG_INFO, F("      AdjustedTime: "));
-		singleMan->outputMan()->print(LOG_INFO, getAdjustedMillis());
-		singleMan->outputMan()->println(LOG_INFO, F(""));
+		singleMan->outputMan()->println(LOG_INFO, getAdjustedMillis());
 	}
 }
 
@@ -171,11 +170,13 @@ bool RadioManager::checkRadioForData() {
 			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
 				newMessage->param4_client_end = millis();
 
-			if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
-				|| newMessage->sentryTargetID == 255 || newMessage->sentryTargetID == 0)
-			{
-				singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
-				this->printlnMessage(LOG_RADIO, *newMessage);
+			if (singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO)) {
+				if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
+					|| newMessage->sentryTargetID == 255 || newMessage->sentryTargetID == 0)
+				{
+					singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
+					this->printlnMessage(LOG_RADIO, *newMessage);
+				}
 			}
 
 			if(pushMessage(newMessage) == false)
@@ -202,15 +203,15 @@ void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message messag
 				case COLOR_MESSAGE_FROM_SENTRY:  singleMan->outputMan()->print(LOG_DEBUG, F("COLOR_MSG_FROM_SENTRY"));  break;
 			}
 
-			singleMan->outputMan()->print(LOG_DEBUG, F("  UID> "));
+			singleMan->outputMan()->print(LOG_DEBUG, F(" UID> "));
 			singleMan->outputMan()->print(LOG_DEBUG, message.UID);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  sentrySrcID> "));
+			singleMan->outputMan()->print(LOG_DEBUG, F(" sentrySrcID> "));
 			singleMan->outputMan()->print(LOG_DEBUG, message.sentrySrcID);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  sentryTargetID> "));
+			singleMan->outputMan()->print(LOG_DEBUG, F(" sentryTargetID> "));
 			singleMan->outputMan()->print(LOG_DEBUG, message.sentryTargetID);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  param1> "));
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p1> "));
 			singleMan->outputMan()->print(LOG_DEBUG, message.param1_byte);
-			singleMan->outputMan()->print(LOG_DEBUG, F("  param5> "));
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p5> "));
 			singleMan->outputMan()->println(LOG_DEBUG, message.param5_client_start);
 		} else {
 			singleMan->outputMan()->println(log_level, message.messageType);
@@ -257,13 +258,9 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 	// If we've already sent or received this message let it die here
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(this->sentUIDs[i] == newMessage->UID) {
-			singleMan->outputMan()->print(LOG_DEBUG, F("NOT PUSHED, SENT BY ME: "));
-			singleMan->outputMan()->println(LOG_DEBUG, this->sentUIDs[i]);
 			return false;
 		}
 		if(this->receivedUIDs[i] == newMessage->UID) {
-			singleMan->outputMan()->print(LOG_DEBUG, F("NOT PUSHED, ALREADY PROCESSED: "));
-			singleMan->outputMan()->println(LOG_DEBUG, this->receivedUIDs[i]);
 			return false;
 		}
 	}
@@ -298,53 +295,47 @@ bool RadioManager::pushMessage(RF24Message *newMessage) {
 
 void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
-	// Mark as sent
-	bool alreadySent = false;
+	// Abort send if already sent
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(this->sentUIDs[i] == messageToSend.UID) {
-			alreadySent = true;
-			break;
+			return;
 		}
 	}
 
-	// Store this as sent
-	if(alreadySent == false) {
-
-		// Check for hardware failure, reset radio - then send message
-		if(rf24.failureDetected) {
-			singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Send, resetting"));
-			resetRadio();
-		}
-
-		// reset UID array pointer
-		this->sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
-		if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
-			nextSentUIDIndex = 0;
-
-		// force a delay to try and minimize transmission conflicts
-		delay(random(0,RADIO_SEND_DELAY+1));
-
-		byte currentZone = singleMan->addrMan()->getZone();
-		byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
-			? random(0,3) : random(3,6);
-
-		singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
-		this->printlnMessage(LOG_RADIO, messageToSend);
-
-		rf24.stopListening();
-
-		rf24.closeReadingPipe(transmitChannel);
-		rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
-
-		if(!rf24.write(&messageToSend, sizeof(RF24Message))) {
-			singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
-		}
-		rf24.flush_tx();
-
-		rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
-
-		rf24.startListening();
+	// Check for hardware failure, reset radio - then send message
+	if(rf24.failureDetected) {
+		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Send, resetting"));
+		resetRadio();
 	}
+
+	// reset UID array pointer
+	this->sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
+	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
+		nextSentUIDIndex = 0;
+
+	// force a delay to try and minimize transmission conflicts
+	delay(random(0,RADIO_SEND_DELAY+1));
+
+	byte currentZone = singleMan->addrMan()->getZone();
+	byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
+		? random(0,3) : random(3,6);
+
+	singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
+	this->printlnMessage(LOG_RADIO, messageToSend);
+
+	rf24.stopListening();
+
+	rf24.closeReadingPipe(transmitChannel);
+	rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
+
+	if(!rf24.write(&messageToSend, sizeof(RF24Message))) {
+		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
+	}
+	rf24.flush_tx();
+
+	rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
+
+	rf24.startListening();
 }
 
 void RadioManager::sendMessage(RF24Message messageToSend) {
@@ -448,17 +439,17 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
 
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
-		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer ***"));
+		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer"));
 
-		singleMan->outputMan()->print(LOG_TIMING, F("calculateOffset --> VagueTxRxTime: "));
+		singleMan->outputMan()->print(LOG_TIMING, F("calcOffset --> VagueTxRxTime: "));
 		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param4_client_end - ntpMessage->param5_client_start);
-		singleMan->outputMan()->print(LOG_TIMING, F("    client_start: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" client_start: "));
 		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param5_client_start);
-		singleMan->outputMan()->print(LOG_TIMING, F("    client_end: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" client_end: "));
 		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param4_client_end);
-		singleMan->outputMan()->print(LOG_TIMING, F("    server_start: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" server_start: "));
 		singleMan->outputMan()->print(LOG_TIMING, ntpMessage->param7_server_start);
-		singleMan->outputMan()->print(LOG_TIMING, F("    server_end: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" server_end: "));
 		singleMan->outputMan()->println(LOG_TIMING, ntpMessage->param6_server_end);
 	}
 
@@ -480,11 +471,11 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 			singleMan->outputMan()->print(LOG_TIMING, F("t1_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t1_t0);
-		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t3: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" t2_t3: "));
 		singleMan->outputMan()->print(LOG_TIMING, t2_t3);
-		singleMan->outputMan()->print(LOG_TIMING, F("    offset_LL: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" offset_LL: "));
 		singleMan->outputMan()->print(LOG_TIMING, t1_t0 + t2_t3);
-		singleMan->outputMan()->print(LOG_TIMING, F("    offset: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" offset: "));
 		singleMan->outputMan()->println(LOG_TIMING, offset);
 	}
 
@@ -499,11 +490,11 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 		singleMan->outputMan()->print(LOG_TIMING, F("t3_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t3_t0);
-		singleMan->outputMan()->print(LOG_TIMING, F("    t2_t1: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" t2_t1: "));
 		singleMan->outputMan()->print(LOG_TIMING, t2_t1);
-		singleMan->outputMan()->print(LOG_TIMING, F("    halfRtripDelay: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" halfRtripDelay: "));
 		singleMan->outputMan()->print(LOG_TIMING, halfRtripDelay);
-		singleMan->outputMan()->print(LOG_TIMING, F("    offset: "));
+		singleMan->outputMan()->print(LOG_TIMING, F(" offset: "));
 		singleMan->outputMan()->println(LOG_TIMING, offset);
 	}
 

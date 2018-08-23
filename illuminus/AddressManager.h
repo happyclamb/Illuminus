@@ -17,8 +17,8 @@ class AddressManager
 
 		byte getZone();
 
-		bool hasAddress();
-		byte getAddress();
+		bool hasAddress() { return this->addressSet; }
+		byte getAddress() { return this->address; }
 		void setAddress(byte newAddress);
 
 		void obtainAddress();

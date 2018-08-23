@@ -33,7 +33,7 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER1_irq();
 
-	singleMan->outputMan()->println(LOG_INFO, F("Setup complete"));
+	singleMan->outputMan()->println(LOG_CLI, F("Setup complete"));
 	singleMan->outputMan()->println(LOG_INFO, F("Info Logging enabled"));
 	singleMan->outputMan()->println(LOG_DEBUG, F("Debug Logging enabled"));
 	singleMan->outputMan()->println(LOG_TIMING, F("Timing Logging enabled"));
@@ -116,6 +116,9 @@ void loop() {
 			singleMan->healthMan()->updateSentryHealthTime(i, 0, millis());
 	}
 
+	// Collect any messages in the queue
+	singleMan->radioMan()->checkRadioForData();
+
 	// Now handle sentry or server loop
 	if (singleMan->addrMan()->getAddress() == 0)
 		serverLoop();
@@ -140,10 +143,8 @@ void serverLoop() {
 	static unsigned long lastMessage = 0;
 	static Radio_Message_Type nextType = NTP_COORD_MESSAGE;
 
-	// Collect and handle any messages in the queue
-	singleMan->radioMan()->checkRadioForData();
+	// Handle any messages in the queue
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
-
 	if(currMessage != NULL)
 	{
 		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());
@@ -239,10 +240,8 @@ void sentryLoop() {
 	static NTP_state ntpState = NTP_DONE;
 	static unsigned long timeOfLastNTPRequest = 0;
 
-	// spin until there is something in a queue
-	singleMan->radioMan()->checkRadioForData();
+	// check the queue
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
-
 	if(currMessage != NULL) {
 
 		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());

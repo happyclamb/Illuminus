@@ -46,11 +46,6 @@ SentryHealth* HealthManager::findSentry(byte id) {
 }
 
 
-byte HealthManager::totalSentries() {
-	return this->sentryCount;
-}
-
-
 byte HealthManager::nextAvailSentryID() {
 	SentryHealthNode *currNode = this->healthQueue;
 
@@ -129,17 +124,6 @@ void HealthManager::checkAllSentryHealth() {
 			singleMan->outputMan()->print(LOG_INFO, F("Sentry "));
 			singleMan->outputMan()->print(LOG_INFO, currNode->health->id);
 			singleMan->outputMan()->println(LOG_INFO, F(" went offline   "));
-
-			if(singleMan->outputMan()->isLogLevelEnabled(LOG_DEBUG)) {
-				singleMan->outputMan()->print(LOG_DEBUG, F("-->  currTime:"));
-				singleMan->outputMan()->print(LOG_DEBUG, currTime);
-				singleMan->outputMan()->print(LOG_DEBUG, F("  deadTime:"));
-				singleMan->outputMan()->print(LOG_DEBUG, deadTime);
-				singleMan->outputMan()->print(LOG_DEBUG, F("  lastRequest:"));
-				singleMan->outputMan()->print(LOG_DEBUG, lastRequest);
-				singleMan->outputMan()->print(LOG_DEBUG, F("  deathOffset:"));
-				singleMan->outputMan()->println(LOG_DEBUG, deathOffset);
-			}
 
 			printHealth(LOG_INFO);
 		}
@@ -254,23 +238,20 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 	returnHealth->last_NTP_request = 0;
 	returnHealth->isAlive = true;
 
-	if(this->healthQueue == NULL) {
-		this->healthQueue = new SentryHealthNode();
-		this->healthQueue->health  = returnHealth;
-		this->healthQueue->next = NULL;
+	// Create new health node
+	SentryHealthNode *newNode = new SentryHealthNode();
+	newNode->health = returnHealth;
+	newNode->next = NULL;
 
+	if(this->healthQueue == NULL) {
+		this->healthQueue = newNode;
 		this->sentryCount = 1;
 	} else {
-
 		SentryHealthNode *lastNode = this->healthQueue;
 		while(lastNode->next != NULL) {
 			lastNode = lastNode->next;
 		}
-
-		lastNode->next = new SentryHealthNode();
-		lastNode->next->health = returnHealth;
-		lastNode->next->next = NULL;
-
+		lastNode->next = newNode;
 		this->sentryCount++;
 	}
 

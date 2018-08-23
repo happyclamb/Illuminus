@@ -16,11 +16,6 @@ byte AddressManager::getZone() {
 }
 
 
-bool AddressManager::hasAddress() {
-	return addressSet;
-}
-
-
 void AddressManager::setAddress(byte newAddress) {
 	address = newAddress;
 	addressSet = true;
@@ -32,11 +27,6 @@ void AddressManager::setAddress(byte newAddress) {
 }
 
 
-byte AddressManager::getAddress() {
-	return address;
-}
-
-
 void AddressManager::sendAddressRequest() {
 	RF24Message addressRequestMessage;
 	addressRequestMessage.messageType = NEW_ADDRESS_REQUEST;
@@ -44,9 +34,8 @@ void AddressManager::sendAddressRequest() {
 	addressRequestMessage.sentryTargetID = 0;
 	singleMan->radioMan()->sendMessage(addressRequestMessage);
 
-	unsigned long requestStart = millis();
-	while(hasAddress() == false &&
-		millis() < (requestStart + singleMan->radioMan()->ntpRequestTimeout()))
+	unsigned long requestStart = millis() + singleMan->radioMan()->ntpRequestTimeout();
+	while(hasAddress() == false && millis() < requestStart)
 	{
 		singleMan->radioMan()->checkRadioForData();
 

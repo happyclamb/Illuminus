@@ -84,22 +84,16 @@ void InputManager::processIncomingByte(const byte inByte) {
 
 void InputManager::showOptions() {
 	Serial.println(F("C&C Lantern CLI"));
-
-	if(singleMan->addrMan()->getAddress() != 0)  {
-		Serial.println(F("WARNING! Can only set interactive mode on master sentry"));
-	}
-
 	Serial.println(F("Options::"));
-	Serial.println(F("i                start up interactive mode"));
-	Serial.println(F("a                return back to auto choosing patterns"));
-	Serial.println(F("l                show current log levels"));
-	Serial.println(F("l ###            toggle log level [info|debug|timing]"));
-	Serial.println(F("p ### ### ###    select a pattern along with parameters to pass"));
-	Serial.println(F("d ######         update duration between patterns"));
-	Serial.println(F("f ######         update frequency between color updates"));
-	Serial.println(F("b ###            update brightness of big LED"));
-	Serial.println(F("h                shows current health of lanterns in network"));
-	Serial.println(F(""));
+	Serial.println(F("b #      update brightness of big LED"));
+	Serial.println(F("l        show current log levels"));
+	Serial.println(F("l #      toggle log level [info|debug|timing]"));
+	Serial.println(F("h        Health of lanterns in network"));
+	Serial.println(F("i        Interactive mode"));
+	Serial.println(F("a        Auto choose patterns"));
+	Serial.println(F("p # # #  Pattern with parameters"));
+	Serial.println(F("d #      update pattern Duration"));
+	Serial.println(F("f #      broadcast updates Frequency"));
 }
 
 void InputManager::setPattern(const char * data) {
@@ -156,50 +150,72 @@ void InputManager::setLogLevel(const char * data){
 // process incoming serial data after a terminator received
 void InputManager::processData(const char * data) {
 
-	if ((data[0] == '?') || strcmp(data, "help") == 0) {
-		this->showOptions();
+	switch (data[0]) {
+		case '?': {
+			this->showOptions();
+			return;
+		}
+		case 'b': {
+			byte bigLedBright = atoi(&data[2]);
+			Serial.print(F("Big LED brightness >> "));
+			Serial.println(bigLedBright);
+			singleMan->lightMan()->setBigLightBrightness(bigLedBright);
+			return;
+		}
+		case 'l': {
+			if(strlen(data) == 1)
+				this->showLogLevels();
+			else
+				this->setLogLevel(&data[2]);
+			return;
+		}
+		case 'h': {
+			singleMan->healthMan()->printHealth(LOG_CLI);
+			return;
+		}
 	}
-	else if (data[0] == 'i') {
-		if(singleMan->addrMan()->getAddress() == 0)  {
-			singleMan->lightMan()->setManualMode(true);
-			Serial.println(F("Interactive mode set"));
-		} else {
-			Serial.println(F("ERROR! Can only set interactive mode on master sentry"));
+
+	if(singleMan->addrMan()->getAddress() == 0)  {
+		switch (data[0]) {
+			case 'i': {
+				singleMan->lightMan()->setManualMode(true);
+				Serial.println(F("Interactive mode set"));
+				return;
+			}
+			case 'a': {
+				singleMan->lightMan()->chooseNewPattern(10);
+				singleMan->lightMan()->setManualMode(false);
+				Serial.println(F("Auto mode set"));
+				return;
+			}
+			case 'p': {
+				if(singleMan->lightMan()->getManualMode()) {
+					this->setPattern(&data[2]);
+				} else {
+					Serial.println(F("ERROR! Can only set pattern in interactive mode"));
+				}
+				return;
+			}
+			case 'd': {
+				unsigned long newDuration = atol(&data[2]);
+				Serial.print(F("Updated pattern duration >> "));
+				Serial.println(newDuration);
+				singleMan->lightMan()->setPatternDuration(newDuration);
+				return;
+			}
+			case 'f': {
+				unsigned long newFrequency = atol(&data[2]);
+				Serial.print(F("Updated broadcast updates frequency >> "));
+				Serial.println(newFrequency);
+				singleMan->radioMan()->setIntervalBroadcastMessages(newFrequency);
+				return;
+			}
 		}
-	} else if (data[0] == 'a') {
-		singleMan->lightMan()->chooseNewPattern(10);
-		singleMan->lightMan()->setManualMode(false);
-		Serial.println(F("Auto mode set"));
-	} else if (data[0] == 'p') {
-		if(singleMan->lightMan()->getManualMode()) {
-			this->setPattern(&data[2]);
-		} else {
-			Serial.println(F("ERROR! Can only set pattern in interactive mode"));
-		}
-	} else if (data[0] == 'b') {
-		byte bigLedBright = atoi(&data[2]);
-		Serial.print(F("Server big LED brightness >> "));
-		Serial.println(bigLedBright);
-		singleMan->lightMan()->setBigLightBrightness(bigLedBright);
-	} else if (data[0] == 'd') {
-		unsigned long newDuration = atol(&data[2]);
-		Serial.print(F("Updated duration between patterns >> "));
-		Serial.println(newDuration);
-		singleMan->lightMan()->setPatternDuration(newDuration);
-	} else if (data[0] == 'f') {
-		unsigned long newFrequency = atol(&data[2]);
-		Serial.print(F("Updated frequency between broadcast updates >> "));
-		Serial.println(newFrequency);
-		singleMan->radioMan()->setIntervalBroadcastMessages(newFrequency);
-	} else if (data[0] == 'l') {
-		if(strlen(data) == 1)
-			this->showLogLevels();
-		else
-			this->setLogLevel(&data[2]);
-	} else if (data[0] == 'h') {
-		singleMan->healthMan()->printHealth(LOG_CLI);
 	} else {
-		Serial.print(F("UNKNOWN COMMAND >> "));
-		Serial.println(data);
+		Serial.println(F("ERROR! Only available on sentry 0"));
+		return;
 	}
+
+	Serial.print(F("UNKNOWN COMMAND >> "));
+	Serial.println(data);
 }

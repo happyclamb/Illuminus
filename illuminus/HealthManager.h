@@ -28,7 +28,7 @@ class HealthManager
 	public:
 		HealthManager(SingletonManager* _singleMan);
 		void updateSentryHealthTime(byte id, unsigned long ntpRequestTime, unsigned long messageTime);
-		byte totalSentries();
+		byte totalSentries() { return this->sentryCount; }
 		byte nextAvailSentryID();
 		byte getOldestNTPRequest();
 		SentryHealth* findSentry(byte id);

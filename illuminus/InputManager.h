@@ -13,9 +13,10 @@ class InputManager
 {
 	public:
 		InputManager(SingletonManager* _singleMan);
-		void showOptions();
 
+		void showOptions();
 		void updateValues();
+
 		bool isButton1Pressed() { return this->button1_pressed; }
 		bool isButton2Pressed() { return this->button2_pressed; }
 		bool isMotionDetected() { return this->motionLevel > 255; }
@@ -25,6 +26,7 @@ class InputManager
 
 	private:
 		SingletonManager* singleMan = NULL;
+
 		bool button1_pressed = false;
 		bool button2_pressed = false;
 		int motionLevel = 0;
@@ -37,7 +39,6 @@ class InputManager
 		void setPattern(const char * data);
 		void showLogLevels();
 		void setLogLevel(const char * data);
-
 };
 
 #endif // __INPUTMANAGER_H__
