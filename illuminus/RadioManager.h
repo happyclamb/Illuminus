@@ -87,7 +87,7 @@ class RadioManager
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		uint64_t pipeAddresses[4][3];
+		uint64_t pipeAddresses[4][6];
 
 		MessageNode* messageQueue = NULL;
 

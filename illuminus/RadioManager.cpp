@@ -11,15 +11,16 @@
 RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		singleMan(_singleMan),
 		rf24(RF24(radio_ce_pin, radio__cs_pin)),
-		pipeAddresses{ { 0xABCDABCD71LL, 0xABCDABCD75LL, 0xABCDABCD79LL },
-		               { 0xBCDABCDA71LL, 0xBCDABCDAC5LL, 0xBCDABCDAC9LL },
-		               { 0xCDABCDAB71LL, 0xCDABCDABC5LL, 0xCDABCDABC9LL },
-		               { 0xDABCDABC71LL, 0xDABCDABCC5LL, 0xDABCDABCC9LL } }
+		pipeAddresses{ { 0xABCDABCD70LL, 0xABCDABCD73LL, 0xABCDABCD76LL, 0xABCDABCD79LL, 0xABCDABCD7CLL, 0xABCDABCD7FLL },
+		               { 0xBCDABCDA70LL, 0xBCDABCDA73LL, 0xBCDABCDA76LL, 0xBCDABCDA79LL, 0xBCDABCDA7CLL, 0xBCDABCDA7FLL },
+		               { 0xCDABCDAB70LL, 0xCDABCDAB73LL, 0xCDABCDAB76LL, 0xCDABCDAB79LL, 0xCDABCDAB7CLL, 0xCDABCDAB7FLL },
+		               { 0xDABCDABC70LL, 0xDABCDABC73LL, 0xDABCDABC76LL, 0xDABCDABC79LL, 0xDABCDABC7CLL, 0xDABCDABC7FLL } }
 {
 	// initialize RF24 radio
 	resetRadio();
 
-	randomSeed(analogRead(0));
+	// Use some vaguely random read to seed the lanterns
+	randomSeed(analogRead(LIGHT_SENSOR_A1_PIN));
 
 	// init the sentUIDs array
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++)
@@ -95,9 +96,13 @@ void RadioManager::resetRadio() {
 
 		for (byte i=0; i<6; i++) rf24.closeReadingPipe(i);
 		byte currentZone = singleMan->addrMan()->getZone();
-		rf24.openWritingPipe(this->pipeAddresses[currentZone][0]);
+
+		rf24.openReadingPipe(0, this->pipeAddresses[currentZone][0]);
 		rf24.openReadingPipe(1, this->pipeAddresses[currentZone][1]);
 		rf24.openReadingPipe(2, this->pipeAddresses[currentZone][2]);
+		rf24.openReadingPipe(3, this->pipeAddresses[currentZone][3]);
+		rf24.openReadingPipe(4, this->pipeAddresses[currentZone][4]);
+		rf24.openReadingPipe(5, this->pipeAddresses[currentZone][5]);
 
 		// kick off with listening
 		rf24.startListening();
@@ -311,17 +316,17 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 			resetRadio();
 		}
 
-		byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID) ? 1 : 2;
-
-		// force a delay to try and minimize transmission conflicts
-		delay(random(0,RADIO_SEND_DELAY+1));
-
 		// reset UID array pointer
 		this->sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
 		if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 			nextSentUIDIndex = 0;
 
+		// force a delay to try and minimize transmission conflicts
+		delay(random(0,RADIO_SEND_DELAY+1));
+
 		byte currentZone = singleMan->addrMan()->getZone();
+		byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
+			? random(0,3) : random(3,6);
 
 		singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
 		this->printlnMessage(LOG_RADIO, messageToSend);
@@ -336,7 +341,6 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 		}
 		rf24.flush_tx();
 
-		rf24.openWritingPipe(this->pipeAddresses[currentZone][0]);
 		rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
 
 		rf24.startListening();
