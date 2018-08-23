@@ -98,7 +98,7 @@ class RadioManager
 
 		unsigned long INTERVAL_BETWEEN_MSGS = 10000;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
-		byte RADIO_SEND_DELAY = 10;
+		int RADIO_SEND_DELAY = 10;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);

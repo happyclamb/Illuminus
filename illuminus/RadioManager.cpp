@@ -117,12 +117,13 @@ bool RadioManager::checkForInterference() {
 }
 
 unsigned long RadioManager::generateUID() {
-	unsigned long generatedUID = ((micros()/(unsigned long)100)*(unsigned long)100);
+	unsigned long generatedUID;
 
 	if(singleMan->addrMan()->hasAddress()) {
-			generatedUID += singleMan->addrMan()->getAddress();
+		generatedUID = ((micros()/(unsigned long)100)*(unsigned long)100);
+		generatedUID += singleMan->addrMan()->getAddress();
 	} else {
-			generatedUID += random(50,100);
+		generatedUID = random(2000000000);
 	}
 
 	return(generatedUID);
@@ -153,7 +154,7 @@ bool RadioManager::checkRadioForData() {
 		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Check, resetting"));
 		resetRadio();
 	} else {
-		if(rf24.available()) {
+		while(rf24.available()) {
 
 			RF24Message* newMessage = new RF24Message();
 			rf24.read(newMessage, sizeof(RF24Message));
@@ -312,7 +313,8 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 
 		byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID) ? 1 : 2;
 
-		delay(singleMan->addrMan()->getAddress()*RADIO_SEND_DELAY);
+		// force a delay to try and minimize transmission conflicts
+		delay(random(0,RADIO_SEND_DELAY+1));
 
 		// reset UID array pointer
 		this->sentUIDs[nextSentUIDIndex++] = messageToSend.UID;

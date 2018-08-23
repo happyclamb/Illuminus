@@ -138,13 +138,13 @@ void InputManager::showLogLevels() {
 
 void InputManager::setLogLevel(const char * data){
 	OUTPUT_LOG_TYPES log_level = LOG_CLI;
-	if (strcmp(data, "info") == 0)
+	if (strcmp(data, "info") == 0 || strcmp(data, "i") == 0)
 		log_level = LOG_INFO;
-	else if (strcmp(data, "debug") == 0)
+	else if (strcmp(data, "debug") == 0 || strcmp(data, "d") == 0)
 		log_level = LOG_DEBUG;
-	else if (strcmp(data, "radio") == 0)
+	else if (strcmp(data, "radio") == 0 || strcmp(data, "r") == 0)
 		log_level = LOG_RADIO;
-	else if (strcmp(data, "timing") == 0)
+	else if (strcmp(data, "timing") == 0 || strcmp(data, "t") == 0)
 		log_level = LOG_TIMING;
 
 	if(log_level != LOG_CLI) {

@@ -90,5 +90,7 @@ void AddressManager::sendNewAddressResponse(RF24Message* addressResponseMessage)
 	addressResponseMessage->sentryTargetID = 255;
 	addressResponseMessage->param1_byte = targetSentry;
 
+	singleMan->healthMan()->setLastAddressAllocated(targetSentry);
+
 	singleMan->radioMan()->sendMessage(*addressResponseMessage);
 }

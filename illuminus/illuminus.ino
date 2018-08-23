@@ -136,6 +136,7 @@ void loop() {
 
 
 void serverLoop() {
+	static byte color_reply_count = 0;
 	static unsigned long lastMessage = 0;
 	static Radio_Message_Type nextType = NTP_COORD_MESSAGE;
 
@@ -157,6 +158,7 @@ void serverLoop() {
 			case COLOR_MESSAGE_FROM_SENTRY:
 				// Going to do something magic with response ??
 				// Maybe something about marking it as known value and resend if not set ?
+				color_reply_count++;
 				break;
 			case NTP_CLIENT_FINISHED:
 				singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, millis(), 0);
@@ -196,6 +198,12 @@ void serverLoop() {
 				break;
 
 			case COLOR_MESSAGE_TO_SENTRY:
+
+				// Give info on # sentries responding
+				singleMan->outputMan()->print(LOG_INFO, F("COLOR_MESSAGE_FROM_SENTRY:: count since last message> "));
+				singleMan->outputMan()->println(LOG_INFO, color_reply_count);
+				color_reply_count = 0;
+
 				// generate newPatterns for LEDs since the interrupt will do the painting
 				singleMan->lightMan()->chooseNewPattern();
 
