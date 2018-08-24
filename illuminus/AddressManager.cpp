@@ -68,6 +68,10 @@ void AddressManager::obtainAddress() {
 		// Now set address as it will use the newly inited pattern
 		setAddress(0);
 	}
+
+	// Add all the earlier siblings to the healthMan
+	for(byte i=0; i <= getAddress(); i++)
+		singleMan->healthMan()->updateSentryMessageTime(i, millis());
 }
 
 

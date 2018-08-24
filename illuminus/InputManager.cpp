@@ -45,13 +45,10 @@ void InputManager::updateValues() {
 	if(digitalRead(INPUT2_PIN) == LOW)
 		button2_pressed = true;
 
-	// Analog input (value 0->1024)
-	int A0_value = analogRead(INPUTA_A0_PIN) / 4;
-
-	// Analog inputs (value 0->1024)
-	lightLevel = analogRead(LIGHT_SENSOR_A1_PIN);
-	soundLevel = analogRead(SOUND_SENSOR_A2_PIN);
-	motionLevel = analogRead(MOTION_SENSOR_A3_PIN);
+	// Analog inputs (value 0->1023)
+	lightLevel = map(analogRead(LIGHT_SENSOR_A1_PIN), 0, 1023, 0, 255);
+	soundLevel = map(analogRead(SOUND_SENSOR_A2_PIN), 0, 1023, 0, 255);
+	motionLevel = map(analogRead(MOTION_SENSOR_A3_PIN), 0, 1023, 0, 255);
 }
 
 void InputManager::processIncomingByte(const byte inByte) {

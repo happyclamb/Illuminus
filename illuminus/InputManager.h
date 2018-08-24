@@ -19,20 +19,20 @@ class InputManager
 
 		bool isButton1Pressed() { return this->button1_pressed; }
 		bool isButton2Pressed() { return this->button2_pressed; }
-		bool isMotionDetected() { return this->motionLevel > 255; }
-		int getLightLevel() { return this->lightLevel; }
-		int getSoundLevel() { return this->soundLevel; }
-		byte getZoneInput() { return this->zoneInput; }
+		bool isMotionDetected() { return this->motionLevel > 64; }
+		byte getLightLevel()    { return this->lightLevel; }
+		byte getSoundLevel()    { return this->soundLevel; }
+		byte getZoneInput()     { return this->zoneInput; }
 
 	private:
 		SingletonManager* singleMan = NULL;
 
+		byte zoneInput = 0;
 		bool button1_pressed = false;
 		bool button2_pressed = false;
-		int motionLevel = 0;
-		int lightLevel = 0;
-		int soundLevel = 0;
-		byte zoneInput = 0;
+		byte motionLevel = 0;
+		byte lightLevel = 0;
+		byte soundLevel = 0;
 
 		void processData(const char * data);
 		void processIncomingByte(const byte inByte);

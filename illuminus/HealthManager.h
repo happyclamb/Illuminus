@@ -15,6 +15,7 @@ class SentryHealth
 		unsigned long last_NTP_request = 0; // 4 bytes
 		unsigned long last_message = 0; // 4 bytes
 		bool isAlive = true; // byte
+		byte last_light_level = 0; // byte
 };
 
 class SentryHealthNode {
@@ -27,7 +28,14 @@ class HealthManager
 {
 	public:
 		HealthManager(SingletonManager* _singleMan);
-		void updateSentryHealthTime(byte id, unsigned long ntpRequestTime, unsigned long messageTime);
+
+		void updateSentryNTPRequestTime(byte id, unsigned long ntpRequestTime)
+			{ this->updateSentryInfo(id, ntpRequestTime, ntpRequestTime, 0); }
+		void updateSentryMessageTime(byte id, unsigned long messageTime)
+			{ this->updateSentryInfo(id, 0, messageTime, 0); }
+		void updateSentryLightLevel(byte id, byte lightLevel)
+			{ this->updateSentryInfo(id, 0, 0, lightLevel); }
+
 		byte totalSentries() { return this->sentryCount; }
 		byte nextAvailSentryID();
 		byte getOldestNTPRequest();
@@ -38,7 +46,6 @@ class HealthManager
 		unsigned long getDeathOffset() { return deathOffset; }
 		void setLastAddressAllocated(byte newValue) { this->last_address_responded = newValue; }
 
-
 	private:
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
@@ -47,6 +54,7 @@ class HealthManager
 		byte last_address_responded = 0;
 
 		void pruneEndSentries();
+		void updateSentryInfo(byte id, unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel);
 		SentryHealth* addSentry(byte newID);
 };
 

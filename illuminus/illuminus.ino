@@ -109,31 +109,28 @@ void loop() {
 
 		// Print out the usage options now that the lantern is up and running
 		singleMan->inputMan()->showOptions();
-
-		// Always set the 0 address since nothing runs without a server
-		// If this was a sentry, add all its children to the healthMan
-		for(byte i=0; i <= singleMan->addrMan()->getAddress(); i++)
-			singleMan->healthMan()->updateSentryHealthTime(i, 0, millis());
 	}
-
-	// Collect any messages in the queue
-	singleMan->radioMan()->checkRadioForData();
-
-	// Now handle sentry or server loop
-	if (singleMan->addrMan()->getAddress() == 0)
-		serverLoop();
-	else
-		sentryLoop();
 
 	// Every IntervalBetweenNTPChecks, check the health of the sentries
 	static unsigned long lastHealthCheck = 0;
 	if(millis() > (lastHealthCheck + singleMan->radioMan()->getIntervalBroadcastMessages())) {
 
 		// always update the local health
-		singleMan->healthMan()->updateSentryHealthTime(singleMan->addrMan()->getAddress(), millis(), millis());
+		singleMan->healthMan()->updateSentryNTPRequestTime(singleMan->addrMan()->getAddress(), millis());
+		singleMan->healthMan()->updateSentryLightLevel(singleMan->addrMan()->getAddress(), singleMan->inputMan()->getLightLevel());
+
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
 	}
+
+	// Collect any messages in the queue
+	singleMan->radioMan()->checkRadioForData();
+
+	// Finally, handle sentry or server loop
+	if (singleMan->addrMan()->getAddress() == 0)
+		serverLoop();
+	else
+		sentryLoop();
 }
 
 
@@ -147,7 +144,7 @@ void serverLoop() {
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 	if(currMessage != NULL)
 	{
-		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());
+		singleMan->healthMan()->updateSentryMessageTime(currMessage->sentrySrcID, millis());
 
 		switch(currMessage->messageType) {
 			case NEW_ADDRESS_REQUEST:
@@ -157,12 +154,12 @@ void serverLoop() {
 				singleMan->radioMan()->handleNTPClientRequest(currMessage);
 				break;
 			case COLOR_MESSAGE_FROM_SENTRY:
-				// Going to do something magic with response ??
-				// Maybe something about marking it as known value and resend if not set ?
+				// Record the light level of the sentry
+				singleMan->healthMan()->updateSentryLightLevel(currMessage->sentrySrcID, currMessage->param1_byte);
 				color_reply_count++;
 				break;
 			case NTP_CLIENT_FINISHED:
-				singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, millis(), 0);
+				singleMan->healthMan()->updateSentryNTPRequestTime(currMessage->sentrySrcID, millis());
 				singleMan->outputMan()->print(LOG_INFO, F("NTP_CLIENT_FINISHED:: sentrySrcID> "));
 				singleMan->outputMan()->print(LOG_INFO, currMessage->sentrySrcID);
 				singleMan->outputMan()->print(LOG_INFO, F("  avgOffset> "));
@@ -244,10 +241,12 @@ void sentryLoop() {
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
 	if(currMessage != NULL) {
 
-		singleMan->healthMan()->updateSentryHealthTime(currMessage->sentrySrcID, 0, millis());
-
 		bool doEcho = true;
 		byte address = singleMan->addrMan()->getAddress();
+
+		// Update message time of sentry sending message
+		singleMan->healthMan()->updateSentryMessageTime(currMessage->sentrySrcID, millis());
+
 		switch(currMessage->messageType) {
 
 			case NEW_ADDRESS_RESPONSE:
@@ -258,9 +257,6 @@ void sentryLoop() {
 				break;
 
 			case NTP_COORD_MESSAGE:
-				// keep sentry alive on all COORD messages
-				singleMan->healthMan()->updateSentryHealthTime(address, 0, millis());
-
 				if(currMessage->sentryTargetID == address) {
 
 					// Might currently be in the middle of NTP sequencing, don't reset
@@ -301,6 +297,7 @@ void sentryLoop() {
 				responseMessage.messageType = COLOR_MESSAGE_FROM_SENTRY;
 				responseMessage.sentryTargetID = 0;
 				responseMessage.sentrySrcID = singleMan->addrMan()->getAddress();
+				responseMessage.param1_byte = singleMan->inputMan()->getLightLevel();
 				responseMessage.param4_client_end = currMessage->UID;
 				responseMessage.param5_client_start = currMessage->UID;
 				responseMessage.param6_server_end = currMessage->UID;

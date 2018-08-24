@@ -12,8 +12,8 @@ HealthManager::HealthManager(SingletonManager* _singleMan) :
 }
 
 
-void HealthManager::updateSentryHealthTime(byte id,
-	unsigned long ntpRequestTime, unsigned long messageTime) {
+void HealthManager::updateSentryInfo(byte id,
+	unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel) {
 
 	// 255 is the 'special' everyone address so don't store it
 	if(id == 255)
@@ -29,6 +29,8 @@ void HealthManager::updateSentryHealthTime(byte id,
 		currSentry->last_NTP_request = ntpRequestTime;
 	if(messageTime > 0)
 		currSentry->last_message = messageTime;
+	if(lightLevel > 0)
+		currSentry->last_light_level = lightLevel;
 }
 
 
@@ -157,7 +159,7 @@ void HealthManager::selectNewServer() {
 	if(foundAliveSentry == false) {
 		singleMan->addrMan()->setAddress(0);
 		singleMan->radioMan()->setMillisOffset(0);
-		updateSentryHealthTime(0, 0, millis());
+		updateSentryMessageTime(0, millis());
 		SentryHealth* oldSentry = findSentry(currAddress);
 		oldSentry->isAlive = false;
 
@@ -202,14 +204,14 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->println(log_level, F("------- HealthManager -------"));
 		singleMan->outputMan()->print(log_level, F("currTime > "));
 		singleMan->outputMan()->print(log_level, millis());
-		singleMan->outputMan()->print(log_level, F("    adjustedTime > "));
+		singleMan->outputMan()->print(log_level, F("  adjustedTime > "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->getAdjustedMillis());
-		singleMan->outputMan()->print(log_level, F("    sentryCount > "));
+		singleMan->outputMan()->print(log_level, F("  sentryCount > "));
 		singleMan->outputMan()->print(log_level, sentryCount);
-		singleMan->outputMan()->print(log_level, F("    this.address > "));
+		singleMan->outputMan()->print(log_level, F("  this.address > "));
 		singleMan->outputMan()->println(log_level, singleMan->addrMan()->getAddress());
 
-		singleMan->outputMan()->print(log_level, F("nextPattern > "));
+		singleMan->outputMan()->print(log_level, F("\n  nextPattern > "));
 		singleMan->lightMan()->getNextPattern()->printlnPattern(singleMan, log_level);
 
 		byte i=0;
@@ -221,7 +223,9 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 			singleMan->outputMan()->print(log_level, F("  lastRequest:"));
 			singleMan->outputMan()->print(log_level, currNode->health->last_message);
 			singleMan->outputMan()->print(log_level, F("  lastNTP:"));
-			singleMan->outputMan()->println(log_level, currNode->health->last_NTP_request);
+			singleMan->outputMan()->print(log_level, currNode->health->last_NTP_request);
+			singleMan->outputMan()->print(log_level, F("  lightLevel:"));
+			singleMan->outputMan()->println(log_level, currNode->health->last_light_level);
 
 			i++;
 			currNode = currNode->next;
@@ -236,6 +240,7 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 	returnHealth->id = newID;
 	returnHealth->last_message = millis();
 	returnHealth->last_NTP_request = 0;
+	returnHealth->last_light_level = 0;
 	returnHealth->isAlive = true;
 
 	// Create new health node
