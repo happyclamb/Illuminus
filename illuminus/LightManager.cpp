@@ -7,6 +7,7 @@
 #include "OutputManager.h"
 #include "SingletonManager.h"
 
+
 void LightPattern::update(LightPattern* newPattern) {
 	this->pattern = newPattern->pattern;
 
@@ -18,6 +19,7 @@ void LightPattern::update(LightPattern* newPattern) {
 
 	this->startTime = newPattern->startTime;
 }
+
 
 void LightPattern::printlnPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level)  {
 	if (singleMan->outputMan()->isLogLevelEnabled(log_level)) {
@@ -38,6 +40,7 @@ void LightPattern::printlnPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES 
 	}
 }
 
+
 LightManager::LightManager(SingletonManager* _singleMan):
 	singleMan(_singleMan),
 	currPattern(new LightPattern()),
@@ -56,16 +59,19 @@ LightManager::LightManager(SingletonManager* _singleMan):
 	singleMan->setLightMan(this);
 }
 
+
 void LightManager::setBigLightBrightness(byte brightness) {
 	singleMan->outputMan()->print(LOG_INFO, F("setBigLightBrightness:  "));
 	singleMan->outputMan()->println(LOG_INFO, brightness);
 	analogWrite(BIG_LED_PIN, brightness);
 }
 
+
 // The currently selected NextPattern
 LightPattern* LightManager::getNextPattern() {
 	return(this->nextPattern);
 }
+
 
 // NextPattern is passed to Sentries via radio messages
 void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level) {
@@ -74,6 +80,7 @@ void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log
 
 	this->nextPattern->update(newPattern);
 }
+
 
 void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/) {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
@@ -95,6 +102,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 	}
 }
 
+
 //*********
 //*********  ColorManipulation Utils *******
 //*********
@@ -106,6 +114,8 @@ CRGB LightManager::colorFromWheelPosition(byte wheelPos, float brightness)
 	colorFromWheelPosition(wheelPos, &r, &g, &b, brightness);
 	return CRGB(r, g, b);
 }
+
+
 void LightManager::colorFromWheelPosition(byte wheelPos,
 	byte *r, byte *g, byte *b, float brightness)
 {
@@ -133,6 +143,7 @@ void LightManager::colorFromWheelPosition(byte wheelPos,
 	*b = (brightness * (float)*b);
 }
 
+
 float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
 	float cosBright = 1.0;
 	if(brightnessSpeed > 0) {
@@ -156,6 +167,7 @@ float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
 	return cosBright;
 }
 
+
 //*********
 //*********  Everything from here forward runs on interrupt !! *******
 //*********
@@ -171,6 +183,7 @@ void LightManager::redrawLights() {
 	FastLED.show();
 }
 
+
 void LightManager::noAddressPattern() {
 	int fadeIndex = ( millis() % (300*7) ) / 7;
 
@@ -181,6 +194,7 @@ void LightManager::noAddressPattern() {
 		ledstrip[i] = CRGB(0,0,fadeIndex);
 }
 
+
 void LightManager::checkForPatternUpdate() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	if((currTime > this->nextPattern->startTime) &&
@@ -189,6 +203,7 @@ void LightManager::checkForPatternUpdate() {
 		this->currPattern->update(this->nextPattern);
 	}
 }
+
 
 void LightManager::updateLEDArrayFromCurrentPattern()
 {
@@ -213,7 +228,7 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
 			break;
 		case 10:
-			solidColor(currPattern->pattern_param1);
+			solidColor(currPattern->pattern_param1, currPattern->pattern_param2);
 			break;
 		case 11:
 			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
@@ -224,6 +239,7 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 			break;
 	}
 }
+
 
 void LightManager::debugPattern() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
@@ -249,13 +265,15 @@ void LightManager::debugPattern() {
 	}
 }
 
-void LightManager::solidColor(byte wheelPos) {
-	CRGB newColor = colorFromWheelPosition(wheelPos);
+
+void LightManager::solidColor(byte wheelPos, byte brightness) {
+	float float_brightness = ((float)map(brightness, 0, 255, 0, 100))/100;
+
+	CRGB newColor = colorFromWheelPosition(wheelPos, float_brightness);
 	for(int i=0; i<NUM_RGB_LEDS; i++) {
 		ledstrip[i] = newColor;
 	}
 }
-
 
 
 // Treat all 6 LEDs as 1 solid colour, default pattern look is to have all
@@ -296,6 +314,7 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 	}
 }
 
+
 // Walk through all the sentries and for each lantern choose a color
 void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground) {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
@@ -316,6 +335,7 @@ void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte i
 		ledstrip[i] = isMe ? standout : background;
 	}
 }
+
 
 void LightManager::comet(byte cometSpeed)
 {

@@ -78,7 +78,7 @@ class LightManager {
 		void updateLEDArrayFromCurrentPattern();
 
 		void debugPattern();
-		void solidColor(byte wheelPos);
+		void solidColor(byte wheelPos, byte brightness);
 		void solidWheelColorChange(LightPatternTimingOptions timingType,
 			int patternSpeed, int brightnessSpeed, bool allLaternLEDs);
 		void walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground);

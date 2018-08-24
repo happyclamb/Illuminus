@@ -33,6 +33,11 @@ class OutputManager
 		void println(OUTPUT_LOG_TYPES log_level, int msg)
 			{ if(this->showOutput(log_level)) { Serial.println(msg); } }
 
+		void print(OUTPUT_LOG_TYPES log_level, float msg)
+			{ if(this->showOutput(log_level)) { Serial.print(msg); } }
+		void println(OUTPUT_LOG_TYPES log_level, float msg)
+			{ if(this->showOutput(log_level)) { Serial.println(msg); } }
+
 		void print(OUTPUT_LOG_TYPES log_level, unsigned long msg)
 			{ if(this->showOutput(log_level)) { Serial.print(msg); } }
 		void println(OUTPUT_LOG_TYPES log_level, unsigned long msg)
