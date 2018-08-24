@@ -16,6 +16,12 @@ InputManager::InputManager(SingletonManager* _singleMan) :
 	pinMode(ZONE_0_PIN, INPUT_PULLUP);
 	pinMode(ZONE_1_PIN, INPUT_PULLUP);
 
+	for(byte i=0; i<5; i++) {
+		this->motionLevel[i] = 0;
+		this->lightLevel[i] = 0;
+		this->soundLevel[i] = 0;
+	}
+
 	updateValues();
 
 	singleMan->setInputMan(this);
@@ -46,9 +52,28 @@ void InputManager::updateValues() {
 		button2_pressed = true;
 
 	// Analog inputs (value 0->1023)
-	lightLevel = map(analogRead(LIGHT_SENSOR_A1_PIN), 0, 1023, 0, 255);
-	soundLevel = map(analogRead(SOUND_SENSOR_A2_PIN), 0, 1023, 0, 255);
-	motionLevel = map(analogRead(MOTION_SENSOR_A3_PIN), 0, 1023, 0, 255);
+	static unsigned long lastRead = 0;
+	if(millis() > (lastRead + 250)) {
+		lightLevel[inputIndex]  = map(analogRead(LIGHT_SENSOR_A1_PIN), 0, 1023, 0, 255);
+		soundLevel[inputIndex]  = map(analogRead(SOUND_SENSOR_A2_PIN), 0, 1023, 0, 255);
+		motionLevel[inputIndex] = map(analogRead(MOTION_SENSOR_A3_PIN), 0, 1023, 0, 255);
+
+		int motionLevel_sum = 0;
+		int lightLevel_sum = 0;
+		int soundLevel_sum = 0;
+		for(byte i=0; i<5; i++) {
+			motionLevel_sum += this->motionLevel[i];
+			lightLevel_sum  += this->lightLevel[i];
+			soundLevel_sum  += this->soundLevel[i];
+		}
+		this->motionLevel_avg = motionLevel_sum / 5;
+		this->lightLevel_avg = lightLevel_sum / 5;
+		this->soundLevel_avg = soundLevel_sum / 5;
+
+		// Advance to next index
+		lastRead = millis();
+		if(++inputIndex == 5) inputIndex = 0;
+	}
 }
 
 void InputManager::processIncomingByte(const byte inByte) {
@@ -172,7 +197,7 @@ void InputManager::processData(const char * data) {
 		}
 	}
 
-	if(singleMan->addrMan()->getAddress() == 0)  {
+	if (singleMan->healthMan()->getServerID() == singleMan->addrMan()->getAddress()) {
 		switch (data[0]) {
 			case 'i': {
 				singleMan->lightMan()->setManualMode(true);

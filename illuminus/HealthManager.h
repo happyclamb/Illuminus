@@ -40,8 +40,10 @@ class HealthManager
 		byte nextAvailSentryID();
 		byte getOldestNTPRequest();
 		SentryHealth* findSentry(byte id);
+
+		byte getServerID();
+
 		void checkAllSentryHealth();
-		void selectNewServer();
 		void printHealth(OUTPUT_LOG_TYPES log_level);
 		unsigned long getDeathOffset() { return deathOffset; }
 		void setLastAddressAllocated(byte newValue) { this->last_address_responded = newValue; }
@@ -50,7 +52,7 @@ class HealthManager
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
 		byte sentryCount = 0;
-		unsigned long deathOffset = 120000;
+		unsigned long deathOffset = 300000; // 5min
 		byte last_address_responded = 0;
 
 		void pruneEndSentries();

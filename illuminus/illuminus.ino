@@ -127,7 +127,7 @@ void loop() {
 	singleMan->radioMan()->checkRadioForData();
 
 	// Finally, handle sentry or server loop
-	if (singleMan->addrMan()->getAddress() == 0)
+	if (singleMan->healthMan()->getServerID() == singleMan->addrMan()->getAddress())
 		serverLoop();
 	else
 		sentryLoop();
@@ -139,6 +139,9 @@ void serverLoop() {
 	static byte color_reply_count = 0;
 	static unsigned long lastMessage = 0;
 	static Radio_Message_Type nextType = NTP_COORD_MESSAGE;
+
+	// on the off chance a lantern became promoted to server; always reset offSet
+	singleMan->radioMan()->setMillisOffset(0);
 
 	// Handle any messages in the queue
 	RF24Message *currMessage = singleMan->radioMan()->popMessage();
@@ -187,7 +190,7 @@ void serverLoop() {
 					// Fire off a message to the next sentry to run an NTPloop
 					RF24Message ntpStartMessage;
 					ntpStartMessage.messageType = NTP_COORD_MESSAGE;
-					ntpStartMessage.sentrySrcID = 0;
+					ntpStartMessage.sentrySrcID = singleMan->addrMan()->getAddress();
 					ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
 
 					singleMan->radioMan()->sendMessage(ntpStartMessage);
@@ -211,7 +214,7 @@ void serverLoop() {
 				// send color updates
 				RF24Message lightMessage;
 				lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
-				lightMessage.sentrySrcID = 0;
+				lightMessage.sentrySrcID = singleMan->addrMan()->getAddress();
 				lightMessage.sentryTargetID = 255;
 				lightMessage.param1_byte = nextPattern->pattern;
 				lightMessage.param2_byte = nextPattern->pattern_param1;

@@ -19,9 +19,9 @@ class InputManager
 
 		bool isButton1Pressed() { return this->button1_pressed; }
 		bool isButton2Pressed() { return this->button2_pressed; }
-		bool isMotionDetected() { return this->motionLevel > 64; }
-		byte getLightLevel()    { return this->lightLevel; }
-		byte getSoundLevel()    { return this->soundLevel; }
+		bool isMotionDetected() { return this->motionLevel_avg > 64; }
+		byte getLightLevel()    { return this->lightLevel_avg; }
+		byte getSoundLevel()    { return this->soundLevel_avg; }
 		byte getZoneInput()     { return this->zoneInput; }
 
 	private:
@@ -30,9 +30,14 @@ class InputManager
 		byte zoneInput = 0;
 		bool button1_pressed = false;
 		bool button2_pressed = false;
-		byte motionLevel = 0;
-		byte lightLevel = 0;
-		byte soundLevel = 0;
+
+		byte inputIndex = 0;
+		byte motionLevel[5];
+		byte lightLevel[5];
+		byte soundLevel[5];
+		byte motionLevel_avg = 0;
+		byte lightLevel_avg = 0;
+		byte soundLevel_avg = 0;
 
 		void processData(const char * data);
 		void processIncomingByte(const byte inByte);

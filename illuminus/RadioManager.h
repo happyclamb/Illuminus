@@ -67,8 +67,8 @@ class RadioManager
 
 		unsigned long ntpRequestTimeout(){ return this->NTP_REQUEST_TIMEOUT; }
 
-		unsigned long getAdjustedMillis();
-		void setMillisOffset(long newOffset);
+		unsigned long getAdjustedMillis() { return millis() + currentMillisOffset; }
+		void setMillisOffset(long newOffset) { currentMillisOffset = newOffset; }
 
 		bool checkRadioForData();
 		RF24Message* peekMessage();
@@ -98,7 +98,7 @@ class RadioManager
 
 		unsigned long INTERVAL_BETWEEN_MSGS = 10000;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
-		int RADIO_SEND_DELAY = 10;
+		int RADIO_SEND_DELAY = 30;
 
 		void resetRadio();
 		void internalSendMessage(RF24Message messageToSend);

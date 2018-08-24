@@ -12,6 +12,18 @@ HealthManager::HealthManager(SingletonManager* _singleMan) :
 }
 
 
+byte HealthManager::getServerID() {
+	SentryHealthNode *currNode = this->healthQueue;
+	while(currNode != NULL) {
+		if(currNode->health->isAlive == true)
+			return currNode->health->id;
+		currNode = currNode->next;
+	}
+
+	return 255;
+}
+
+
 void HealthManager::updateSentryInfo(byte id,
 	unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel) {
 
@@ -134,40 +146,6 @@ void HealthManager::checkAllSentryHealth() {
 	}
 
 	pruneEndSentries();
-
-	selectNewServer();
-}
-
-
-void HealthManager::selectNewServer() {
-
-	// if still in setup stage OR already is the server then skip this
-	if(singleMan->addrMan()->hasAddress() == false ||
-			singleMan->addrMan()->getAddress() == 0)
-		return;
-
-	byte currAddress = singleMan->addrMan()->getAddress();
-	bool foundAliveSentry = false;
-	for(byte i=0; i<currAddress; i++) {
-		SentryHealth* foundSentry = findSentry(i);
-		if(foundSentry->isAlive == true) {
-			foundAliveSentry = true;
-			break;
-		}
-	}
-
-	if(foundAliveSentry == false) {
-		singleMan->addrMan()->setAddress(0);
-		singleMan->radioMan()->setMillisOffset(0);
-		updateSentryMessageTime(0, millis());
-		SentryHealth* oldSentry = findSentry(currAddress);
-		oldSentry->isAlive = false;
-
-		singleMan->outputMan()->print(LOG_INFO, F("Sentry "));
-		singleMan->outputMan()->print(LOG_INFO, currAddress);
-		singleMan->outputMan()->println(LOG_INFO, F(" promoted to Server"));
-		printHealth(LOG_INFO);
-	}
 }
 
 
@@ -208,10 +186,12 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->getAdjustedMillis());
 		singleMan->outputMan()->print(log_level, F("  sentryCount > "));
 		singleMan->outputMan()->print(log_level, sentryCount);
+		singleMan->outputMan()->print(log_level, F("  zone > "));
+		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getZone());
 		singleMan->outputMan()->print(log_level, F("  this.address > "));
 		singleMan->outputMan()->println(log_level, singleMan->addrMan()->getAddress());
 
-		singleMan->outputMan()->print(log_level, F("\n  nextPattern > "));
+		singleMan->outputMan()->print(log_level, F("    nextPattern > "));
 		singleMan->lightMan()->getNextPattern()->printlnPattern(singleMan, log_level);
 
 		byte i=0;
@@ -252,11 +232,20 @@ SentryHealth* HealthManager::addSentry(byte newID) {
 		this->healthQueue = newNode;
 		this->sentryCount = 1;
 	} else {
-		SentryHealthNode *lastNode = this->healthQueue;
-		while(lastNode->next != NULL) {
-			lastNode = lastNode->next;
+
+		SentryHealthNode *currNode = this->healthQueue;
+		while(currNode != NULL) {
+			SentryHealthNode *nextNode = currNode->next;
+			if (currNode->health->id < newID) {
+				if (nextNode == NULL || nextNode->health->id > newID) {
+					newNode->next = nextNode;
+					currNode->next = newNode;
+					nextNode = NULL;
+				}
+			}
+			currNode = nextNode;
 		}
-		lastNode->next = newNode;
+
 		this->sentryCount++;
 	}
 
