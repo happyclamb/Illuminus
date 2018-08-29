@@ -66,8 +66,8 @@ class LightManager {
 		LightPattern* currPattern;
 		LightPattern* nextPattern;
 
-		byte number_patterns_defined = 4;
-		unsigned long pattern_duration = 30000;
+		byte number_patterns_defined = 5;
+		unsigned long pattern_duration = 60000;
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);
@@ -78,11 +78,10 @@ class LightManager {
 		void updateLEDArrayFromCurrentPattern();
 
 		void debugPattern();
-		void solidColor(byte wheelPos, byte brightness);
+		void solidColor(byte wheelPos, byte brightness, byte sentyRequested);
 		void solidWheelColorChange(LightPatternTimingOptions timingType,
-			int patternSpeed, int brightnessSpeed, bool allLaternLEDs);
+			byte patternSpeed, byte brightnessSpeed, byte insideColors);
 		void walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground);
-		void comet(byte cometSpeed);
 };
 
 #endif // __LIGHTMANAGER_H__

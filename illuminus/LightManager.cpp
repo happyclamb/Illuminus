@@ -49,7 +49,7 @@ LightManager::LightManager(SingletonManager* _singleMan):
 
 	// Init RTG
 	FastLED.addLeds<NEOPIXEL, RGB_STRIP_PIN>(ledstrip, NUM_RGB_LEDS);
-	for(int i=0; i<NUM_RGB_LEDS; i++)
+	for(byte i=0; i<NUM_RGB_LEDS; i++)
 		ledstrip[i] = CRGB(0,0,0);
 	FastLED.show();
 
@@ -89,9 +89,9 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
-		this->nextPattern->pattern_param1 = random(1, 4)*20;
-		this->nextPattern->pattern_param2 = random(0, 3)*5;
-		this->nextPattern->pattern_param3 = random(1, 4);
+		this->nextPattern->pattern_param1 = random(1, 4)*15;
+		this->nextPattern->pattern_param2 = random(0, 3)*4;
+		this->nextPattern->pattern_param3 = random(0, 6);
 		this->nextPattern->pattern_param4 = random(1, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
@@ -190,7 +190,7 @@ void LightManager::noAddressPattern() {
 	if(fadeIndex > 150)
 		fadeIndex = 150 - (fadeIndex-150);
 
-	for(int i=0; i<NUM_RGB_LEDS; i++)
+	for(byte i=0; i<NUM_RGB_LEDS; i++)
 		ledstrip[i] = CRGB(0,0,fadeIndex);
 }
 
@@ -213,29 +213,27 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 			break;
 		case 1:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
+				currPattern->pattern_param2, currPattern->pattern_param3);
 			break;
 		case 2:
 			solidWheelColorChange(PATTERN_TIMING_STAGGER, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
+				currPattern->pattern_param2, currPattern->pattern_param3);
 			break;
 		case 3:
 			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
+				currPattern->pattern_param2, currPattern->pattern_param3);
 			break;
 		case 4:
 			solidWheelColorChange(PATTERN_TIMING_NONE, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3 > 2 ? true : false);
+				currPattern->pattern_param2, currPattern->pattern_param3);
+			break;
+		case 5:
+			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
+				50+(currPattern->pattern_param3*20));
 			break;
 		case 10:
-			solidColor(currPattern->pattern_param1, currPattern->pattern_param2);
-			break;
-		case 11:
-			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
+			solidColor(currPattern->pattern_param1, currPattern->pattern_param2,
 				currPattern->pattern_param3);
-			break;
-		case 99:
-			comet(currPattern->pattern_param1);
 			break;
 	}
 }
@@ -257,7 +255,7 @@ void LightManager::debugPattern() {
 		case 2: paramColor = CRGB(0,0,75); break;
 	}
 
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
+	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		if(litIndex == i)
 			ledstrip[i] = paramColor;
 		else
@@ -266,11 +264,15 @@ void LightManager::debugPattern() {
 }
 
 
-void LightManager::solidColor(byte wheelPos, byte brightness) {
+void LightManager::solidColor(byte wheelPos, byte brightness, byte sentyRequested) {
 	float float_brightness = ((float)map(brightness, 0, 255, 0, 100))/100;
 
-	CRGB newColor = colorFromWheelPosition(wheelPos, float_brightness);
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
+	CRGB newColor = CRGB(0,0,0);
+	if(sentyRequested == 255 || sentyRequested == singleMan->addrMan()->getAddress()) {
+		newColor = colorFromWheelPosition(wheelPos, float_brightness);
+	}
+
+	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		ledstrip[i] = newColor;
 	}
 }
@@ -282,7 +284,7 @@ void LightManager::solidColor(byte wheelPos, byte brightness) {
 // MATH: cycle through all 255 wheel positions over ~3sec
 // == 3000/255 == 11.7 ... make a step 12ms == 12*255 == 3060
 void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
-	int patternSpeed, int brightnessSpeed, bool allLaternLEDs) {
+	byte patternSpeed, byte brightnessSpeed, byte insideColors) {
 	unsigned long currTime = 0;
 	if(timingType == PATTERN_TIMING_NONE)
 		currTime = millis();
@@ -304,13 +306,22 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 	}
 
 	byte baseWheel = wheelPos+thisSentryOffset;
-	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / NUM_RGB_LEDS;
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
-		byte nextStep = baseWheel;
-		if(allLaternLEDs == false)
-			nextStep += (i*offsetForLanternLeds);
 
-		ledstrip[i] = colorFromWheelPosition(nextStep, brightnessFloat);
+	byte numColours;
+	if (insideColors == 0) numColours = 1;
+	else if (insideColors == 1 || insideColors == 3) numColours = 2;
+	else if (insideColors == 2 || insideColors == 4) numColours = 3;
+	else numColours = 6;
+	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / numColours;
+
+	for(byte i=0; i<NUM_RGB_LEDS; i++) {
+		byte LEDcolor = baseWheel;
+		if (insideColors == 3 || insideColors == 4)
+			LEDcolor += offsetForLanternLeds*(i/numColours);
+		else
+			LEDcolor += offsetForLanternLeds*(i%numColours);
+
+		ledstrip[i] = colorFromWheelPosition(LEDcolor, brightnessFloat);
 	}
 }
 
@@ -331,37 +342,7 @@ void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte i
 	static CRGB standout;
 	if(!isMe) standout = colorFromWheelPosition(random(0, COLOR_STEPS_IN_WHEEL));
 
-	for(int i=0; i<NUM_RGB_LEDS; i++) {
+	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		ledstrip[i] = isMe ? standout : background;
 	}
-}
-
-
-void LightManager::comet(byte cometSpeed)
-{
-	// Want to dim each light from 255->0   over (~255ms*2)
-	// Light moves at about 255ms / light. == MOVE_SPEED
-	// 8 lights * 255 + 1 segent of all black + 2 segment final fade ==  (NUMBER_SENTRIES + 3) * MOVE_SPEED
-	byte numberOfSteps = singleMan->healthMan()->totalSentries() + 3; // 1 blank extra and 2 fades
-	unsigned long totalPatternTime = numberOfSteps * cometSpeed;
-	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	byte currentPatternSegment = (currTime % totalPatternTime)/(unsigned long)cometSpeed;
-
-	long timeIntoASegment = (currTime % totalPatternTime) - (currentPatternSegment * cometSpeed);
-
-	byte numberOfColorDecreaseSteps = 85;
-	byte brightnessLevel = ((cometSpeed-timeIntoASegment)*numberOfColorDecreaseSteps)/cometSpeed;
-
-	byte address = singleMan->addrMan()->getAddress();
-	if(currentPatternSegment == (address+1))
-		brightnessLevel = brightnessLevel + 170;
-	else if(currentPatternSegment == (address+2))
-		brightnessLevel = brightnessLevel + 85;
-	else if(currentPatternSegment == (address+3))
-		brightnessLevel = brightnessLevel;
-	else
-		brightnessLevel = 0;
-
-	for(int i=0; i<NUM_RGB_LEDS; i++)
-		ledstrip[i] = CRGB(brightnessLevel,brightnessLevel,brightnessLevel);
 }
