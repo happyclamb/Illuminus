@@ -197,7 +197,7 @@ void InputManager::processData(const char * data) {
 		}
 	}
 
-	if (singleMan->healthMan()->getServerID() == singleMan->addrMan()->getAddress()) {
+	if (singleMan->healthMan()->getServerAddress() == singleMan->addrMan()->getAddress()) {
 		switch (data[0]) {
 			case 'i': {
 				singleMan->lightMan()->setManualMode(true);

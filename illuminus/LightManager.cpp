@@ -172,6 +172,7 @@ float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
 //*********  Everything from here forward runs on interrupt !! *******
 //*********
 void LightManager::redrawLights() {
+
 	// If there is no address gently pulse blue light
 	if(singleMan->addrMan()->hasAddress() == false) {
 		noAddressPattern();

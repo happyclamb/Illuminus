@@ -12,7 +12,7 @@ HealthManager::HealthManager(SingletonManager* _singleMan) :
 }
 
 
-byte HealthManager::getServerID() {
+byte HealthManager::getServerAddress() {
 	SentryHealthNode *currNode = this->healthQueue;
 	while(currNode != NULL) {
 		if(currNode->health->isAlive == true)

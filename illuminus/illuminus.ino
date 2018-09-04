@@ -96,7 +96,6 @@ ISR(TIMER1_OVF_vect)
 
 
 void loop() {
-
 	// Update Inputs
 	singleMan->inputMan()->updateValues();
 
@@ -127,7 +126,7 @@ void loop() {
 	singleMan->radioMan()->checkRadioForData();
 
 	// Finally, handle sentry or server loop
-	if (singleMan->healthMan()->getServerID() == singleMan->addrMan()->getAddress())
+	if (singleMan->healthMan()->getServerAddress() == singleMan->addrMan()->getAddress())
 		serverLoop();
 	else
 		sentryLoop();

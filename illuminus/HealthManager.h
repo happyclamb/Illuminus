@@ -41,7 +41,7 @@ class HealthManager
 		byte getOldestNTPRequest();
 		SentryHealth* findSentry(byte id);
 
-		byte getServerID();
+		byte getServerAddress();
 
 		void checkAllSentryHealth();
 		void printHealth(OUTPUT_LOG_TYPES log_level);

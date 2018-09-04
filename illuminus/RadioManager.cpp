@@ -143,6 +143,7 @@ bool RadioManager::checkRadioForData() {
 	} else {
 		while(rf24.available()) {
 
+			// read takes ~ 0.15ms (150 microseconds)
 			RF24Message* newMessage = new RF24Message();
 			rf24.read(newMessage, sizeof(RF24Message));
 
@@ -288,18 +289,23 @@ void RadioManager::internalSendMessage(RF24Message messageToSend) {
 	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 		nextSentUIDIndex = 0;
 
-	// force a delay to try and minimize transmission conflicts
-	delay(random(0,RADIO_SEND_DELAY));
-
-	byte currentZone = singleMan->addrMan()->getZone();
-	byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
-		? random(0,3) : random(3,6);
+	// Force a delay to try and minimize transmission conflicts
+	//	on all sentries but the master since master needs to respond in a predictable
+	//	manner for time correction to be accurate!
+	if (singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
+		delay(random(0,RADIO_SEND_DELAY));
 
 	singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
 	this->printlnMessage(LOG_RADIO, messageToSend);
 
-	rf24.stopListening();
+	// Get zone and upstream or downstream channel for transmissions
+	//	Randomized channels to try and minimize transmission conflicts
+	byte currentZone = singleMan->addrMan()->getZone();
+	byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
+		? random(0,3) : random(3,6);
 
+	// sending time is about 1.5 ms (1500 microseconds)
+	rf24.stopListening();
 	rf24.closeReadingPipe(transmitChannel);
 	rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
 
