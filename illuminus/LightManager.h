@@ -34,13 +34,6 @@ class LightPattern {
 		void printlnPattern(SingletonManager* singleMan, OUTPUT_LOG_TYPES log_level);
 };
 
-enum LightPatternTimingOptions {
-			PATTERN_TIMING_NONE,
-			PATTERN_TIMING_STAGGER,
-			PATTERN_TIMING_ALTERNATE,
-			PATTERN_TIMING_SYNC
-};
-
 class LightManager {
 	public:
 		LightManager(SingletonManager* _singleMan);

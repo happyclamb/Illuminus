@@ -6,6 +6,7 @@
 
 #include "IlluminusDefs.h"
 #include "SingletonManager.h"
+#include "Message.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
 RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
@@ -19,6 +20,11 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 	// initialize RF24 radio
 	resetRadio();
 
+	// init stacks
+	messageReceiveStack = new MessageStack();
+	messageUpstreamStack = new MessageStack();
+	messageDownstreamStack = new MessageStack();
+
 	// Use some vaguely random read to seed the lanterns
 	randomSeed(analogRead(LIGHT_SENSOR_A1_PIN));
 
@@ -31,6 +37,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 
 	singleMan->setRadioMan(this);
 }
+
 
 void RadioManager::resetRadio() {
 	// Init Radio
@@ -71,7 +78,6 @@ void RadioManager::resetRadio() {
 		// uint8_t 	getDynamicPayloadSize (void)
 		rf24.setPayloadSize(sizeof(RF24Message));
 
-		// clamb: todo: set this to 3?
 		// void 	setAddressWidth (uint8_t a_width)
 		// rf24.setAddressWidth(3);
 
@@ -112,6 +118,7 @@ void RadioManager::resetRadio() {
 	}
 }
 
+
 bool RadioManager::checkForInterference() {
 	bool returnVal = false;
 
@@ -120,6 +127,7 @@ bool RadioManager::checkForInterference() {
 
 	return returnVal;
 }
+
 
 unsigned long RadioManager::generateUID() {
 	unsigned long generatedUID;
@@ -134,9 +142,9 @@ unsigned long RadioManager::generateUID() {
 	return(generatedUID);
 }
 
-// polls for available data, and if found pushes to the queue
-bool RadioManager::checkRadioForData() {
 
+// polls for available data, and if found pushes to the queue
+void RadioManager::checkRadioForData() {
 	if(rf24.failureDetected) {
 		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Check, resetting"));
 		resetRadio();
@@ -147,12 +155,15 @@ bool RadioManager::checkRadioForData() {
 			RF24Message* newMessage = new RF24Message();
 			rf24.read(newMessage, sizeof(RF24Message));
 
-			// If the payload is a NTP_CLIENT_REQUEST then immediately
-			//	update server_start time
-			if(newMessage->messageType == NTP_CLIENT_REQUEST)
-				newMessage->param7_server_start = millis();
-			else if(newMessage->messageType == NTP_SERVER_RESPONSE)
-				newMessage->param4_client_end = millis();
+			// If the payload is part of the NTP chain then immediately
+			//	update server_start time param times when the target sentry gets it's data
+			if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()) {
+				if(newMessage->messageType == NTP_CLIENT_REQUEST) {
+					newMessage->param7_server_start = millis();
+				} else if(newMessage->messageType == NTP_SERVER_RESPONSE) {
+					newMessage->param4_client_end = millis();
+				}
+			}
 
 			if (singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO)) {
 				if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
@@ -163,12 +174,31 @@ bool RadioManager::checkRadioForData() {
 				}
 			}
 
-			if(pushMessage(newMessage) == false)
-				delete newMessage;
+			this->queueReceivedMessage(newMessage);
+			newMessage = NULL;
+		}
+	}
+}
+
+
+void RadioManager::queueReceivedMessage(RF24Message *newMessage) {
+
+	// If we've already sent or received this message let it die here
+	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
+		if(this->sentUIDs[i] == newMessage->UID) {
+			delete newMessage;
+		}
+		if(this->receivedUIDs[i] == newMessage->UID) {
+			delete newMessage;
 		}
 	}
 
-	return (this->messageQueue == NULL);
+	this->messageReceiveStack->push(newMessage);
+
+	// Store this as received
+	this->receivedUIDs[nextReceivedUIDIndex++] = newMessage->UID;
+	if(nextReceivedUIDIndex == MAX_STORED_MSG_IDS)
+		nextReceivedUIDIndex = 0;
 }
 
 void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message message) {
@@ -204,163 +234,155 @@ void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message messag
 }
 
 
-RF24Message* RadioManager::peekMessage() {
-	RF24Message* returnMessage = NULL;
-
-	MessageNode* messageTail = this->messageQueue;
-	while(messageTail != NULL) {
-		returnMessage = messageTail->message;
-		messageTail = messageTail->next;
-	}
-
-	return(returnMessage);
+RF24Message* RadioManager::peekMessage(Radio_Message_Type type) {
+	return(this->messageReceiveStack->peekMessageType(type));
 }
 
 
-RF24Message* RadioManager::popMessage() {
-	RF24Message* returnMessage = NULL;
-	if(this->messageQueue != NULL) {
-		returnMessage = this->messageQueue->message;
-		MessageNode *newHead = this->messageQueue->next;
-		delete this->messageQueue;
-		this->messageQueue = newHead;
-	}
-
-	return(returnMessage);
+RF24Message* RadioManager::popMessageReceive() {
+	return(this->messageReceiveStack->shift());
 }
 
-bool RadioManager::pushMessage(RF24Message *newMessage) {
 
-	// If we've already sent or received this message let it die here
-	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
-		if(this->sentUIDs[i] == newMessage->UID) {
-			return false;
+void RadioManager::transmitStack(MessageStack* messageStack, bool upstream) {
+
+	if(messageStack->isEmpty() == false) {
+
+		// Check for hardware failure, reset radio - then send message
+		if(rf24.failureDetected) {
+			singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Send, resetting"));
+			resetRadio();
 		}
-		if(this->receivedUIDs[i] == newMessage->UID) {
-			return false;
-		}
-	}
 
-	if(this->messageQueue == NULL)
-	{
-		this->messageQueue = new MessageNode();
-		this->messageQueue->next = NULL;
-		this->messageQueue->message = newMessage;
-	}
-	else
-	{
-		MessageNode *lastNode = this->messageQueue;
+		// Get zone and upstream or downstream channel for transmissions
+		//	Randomized channels to try and minimize transmission conflicts
+		byte currentZone = singleMan->addrMan()->getZone();
+		byte transmitChannel = upstream ? random(0,3) : random(3,6);
 
-		// find last location to insert message
-		while(lastNode->next != NULL)
-			lastNode = lastNode->next;
+		// sending time is about 1.5 ms (1500 microseconds)
+		rf24.stopListening();
+		rf24.closeReadingPipe(transmitChannel);
+		rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
 
-		MessageNode *newNode = new MessageNode();
-		lastNode->next = newNode;
-		newNode->message = newMessage;
-	}
+		RF24Message *messageToSend = messageStack->shift();
+		while (messageToSend != NULL) {
 
-	// Store this as received
-	this->receivedUIDs[nextReceivedUIDIndex++] = newMessage->UID;
-	if(nextReceivedUIDIndex == MAX_STORED_MSG_IDS)
-		nextReceivedUIDIndex = 0;
-
-	return true;
-}
-
-
-void RadioManager::internalSendMessage(RF24Message messageToSend) {
-
-	// Abort send if already sent
-	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
-		if(this->sentUIDs[i] == messageToSend.UID) {
-			return;
-		}
-	}
-
-	// Check for hardware failure, reset radio - then send message
-	if(rf24.failureDetected) {
-		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Send, resetting"));
-		resetRadio();
-	}
-
-	// reset UID array pointer
-	this->sentUIDs[nextSentUIDIndex++] = messageToSend.UID;
-	if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
-		nextSentUIDIndex = 0;
-
-	// Force a delay to try and minimize transmission conflicts
-	//	on all sentries but the master since master needs to respond in a predictable
-	//	manner for time correction to be accurate!
-	if (singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
-		delay(random(0,RADIO_SEND_DELAY));
-
-	singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
-	this->printlnMessage(LOG_RADIO, messageToSend);
-
-	// Get zone and upstream or downstream channel for transmissions
-	//	Randomized channels to try and minimize transmission conflicts
-	byte currentZone = singleMan->addrMan()->getZone();
-	byte transmitChannel = (messageToSend.sentrySrcID < messageToSend.sentryTargetID)
-		? random(0,3) : random(3,6);
-
-	// sending time is about 1.5 ms (1500 microseconds)
-	rf24.stopListening();
-	rf24.closeReadingPipe(transmitChannel);
-	rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
-
-	if(!rf24.write(&messageToSend, sizeof(RF24Message))) {
-		singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
-	}
-	rf24.flush_tx();
-
-	rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
-
-	rf24.startListening();
-}
-
-void RadioManager::sendMessage(RF24Message messageToSend) {
-
-		// Sending messages requires a new UID; but don't want
-		//	to change UID when echoing!
-		messageToSend.UID = generateUID();
-
-		internalSendMessage(messageToSend);
-}
-
-void RadioManager::echoMessage(RF24Message messageToEcho) {
-
-	byte address = singleMan->addrMan()->getAddress();
-
-	// Only echo the message if current sentry isn't 'upstream'
-	if((messageToEcho.sentrySrcID < messageToEcho.sentryTargetID && address < messageToEcho.sentryTargetID) ||
-		(messageToEcho.sentryTargetID < messageToEcho.sentrySrcID && address < messageToEcho.sentrySrcID) ||
-		(messageToEcho.sentryTargetID == 255) ||
-		(messageToEcho.sentrySrcID == 255))
-	{
-			// Only care about checking for resending as we *do* want to echo received messages
+			bool doSend = true;
+			// Abort send if already sent
 			for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
-				if(this->sentUIDs[i] == messageToEcho.UID) {
-					return;
+				if(this->sentUIDs[i] == messageToSend->UID) {
+					doSend = false;
+					break;
 				}
 			}
 
-			internalSendMessage(messageToEcho);
+			if(doSend) {
+				// reset UID array pointer
+				this->sentUIDs[nextSentUIDIndex++] = messageToSend->UID;
+				if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
+					nextSentUIDIndex = 0;
+
+				singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
+				this->printlnMessage(LOG_RADIO, messageToSend);
+
+				// If the payload is part of the NTP chain then immediately
+				//	update param times before sending message
+				if(messageToSend->sentrySrcID == singleMan->addrMan()->getAddress()) {
+					if(messageToSend->messageType == NTP_CLIENT_REQUEST) {
+						messageToSend->param5_client_start = millis();
+					} else if(messageToSend->messageType == NTP_SERVER_RESPONSE) {
+						messageToSend->param6_server_end = millis();
+					}
+				}
+
+				if(!rf24.write(messageToSend, sizeof(RF24Message))) {
+					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
+				}
+				rf24.flush_tx();
+			}
+
+			delete messageToSend;
+			messageToSend = messageStack->shift();
 		}
+
+		rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
+		rf24.startListening();
+	}
+}
+
+void RadioManager::sendMessage(RF24Message* messageToSend) {
+
+		// Sending messages requires a new UID; but don't want
+		//	to change UID when echoing!
+		messageToSend->UID = generateUID();
+
+		queueSendMessage(messageToSend);
+}
+
+void RadioManager::echoMessage(RF24Message* messageToEcho) {
+	queueSendMessage(messageToEcho);
+}
+
+void RadioManager::queueSendMessage(RF24Message* messageToQueue) {
+	byte address = singleMan->addrMan()->getAddress();
+
+	if(messageToQueue->sentrySrcID < messageToQueue->sentryTargetID && address < messageToQueue->sentryTargetID)
+	{
+		// add to upstreamStack
+		this->messageUpstreamStack->push(messageToQueue);
+	}	else if(messageToQueue->sentrySrcID > messageToQueue->sentryTargetID && address > messageToQueue->sentryTargetID)
+	{
+		// add to downstreamStack
+		this->messageDownstreamStack->push(messageToQueue);
+	} else {
+		delete messageToQueue;
+	}
+}
+
+void RadioManager::checkSendWindow() {
+
+	bool transmitUp = false;
+	bool transmitDown = false;
+
+	byte totalSentries = singleMan->healthMan()->totalSentries();
+	if(totalSentries > 1 && singleMan->addrMan()->hasAddress() == true) {
+		// total windows is 1 less than total sentries as the endpoints don't need to transmit
+		unsigned long totalWindows = totalSentries - 1;
+		unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
+		byte upstreamStep = (currTime%(totalWindows*TRANSMISSION_WINDOW_SIZE))/TRANSMISSION_WINDOW_SIZE;
+		byte downstreamStep = totalWindows - upstreamStep;
+
+		byte address = singleMan->addrMan()->getAddress();
+		// 0 1 2 3 4 _		UP
+		// _ 1 2 3 4 5		DOWN
+		if(address == upstreamStep) {
+			transmitUp = true;
+		}
+		if(address == downstreamStep) {
+			transmitDown = true;
+		}
+	}
+
+	if(transmitUp || totalSentries == 1) {
+		transmitStack(this->messageUpstreamStack, true);
+	}
+	if(transmitDown || singleMan->addrMan()->hasAddress() == false) {
+		transmitStack(this->messageDownstreamStack, false);
+	}
 }
 
 NTP_state RadioManager::sendNTPRequestToServer() {
 
-	RF24Message ntpOut;
-	ntpOut.messageType = NTP_CLIENT_REQUEST;
-	ntpOut.sentrySrcID = singleMan->addrMan()->getAddress();
-	ntpOut.sentryTargetID = 0;
-	ntpOut.param4_client_end = 0;
-	ntpOut.param5_client_start = millis();
-	ntpOut.param6_server_end = 0;
-	ntpOut.param7_server_start = 0;
+	RF24Message *ntpRequest = new RF24Message();
+	ntpRequest->messageType = NTP_CLIENT_REQUEST;
+	ntpRequest->sentrySrcID = singleMan->addrMan()->getAddress();
+	ntpRequest->sentryTargetID = 0;
+	ntpRequest->param4_client_end = 0;
+	ntpRequest->param5_client_start = millis();
+	ntpRequest->param6_server_end = 0;
+	ntpRequest->param7_server_start = 0;
 
-	sendMessage(ntpOut);
+	sendMessage(ntpRequest);
 
 	return(NTP_WAITING_FOR_RESPONSE);
 }
@@ -401,11 +423,11 @@ NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
 			this->setMillisOffset(averagedOffset);
 
 			// Tell the server that syncronization has happened.
-			RF24Message ntpClientFinished;
-			ntpClientFinished.messageType = NTP_CLIENT_FINISHED;
-			ntpClientFinished.sentrySrcID = singleMan->addrMan()->getAddress();
-			ntpClientFinished.sentryTargetID = 0;
-			ntpClientFinished.param5_client_start = averagedOffset;
+			RF24Message* ntpClientFinished = new RF24Message();
+			ntpClientFinished->messageType = NTP_CLIENT_FINISHED;
+			ntpClientFinished->sentrySrcID = singleMan->addrMan()->getAddress();
+			ntpClientFinished->sentryTargetID = 0;
+			ntpClientFinished->param5_client_start = averagedOffset;
 			sendMessage(ntpClientFinished);
 
 			// reset variables to wait for next NTP sync
@@ -484,13 +506,14 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 }
 
 
-void RadioManager::handleNTPClientRequest(RF24Message* ntpMessage) {
+void RadioManager::handleNTPClientRequest(RF24Message* ntpRequest) {
 
 	// Set the payload
-	ntpMessage->messageType = NTP_SERVER_RESPONSE;
-	ntpMessage->sentryTargetID = ntpMessage->sentrySrcID;
-	ntpMessage->sentrySrcID = singleMan->addrMan()->getAddress();
+	RF24Message* ntpResponse = new RF24Message(ntpRequest);
+	ntpResponse->messageType = NTP_SERVER_RESPONSE;
+	ntpResponse->sentryTargetID = ntpRequest->sentrySrcID;
+	ntpResponse->sentrySrcID = singleMan->addrMan()->getAddress();
+	ntpResponse->param6_server_end = millis();
 
-	ntpMessage->param6_server_end = millis();
-	sendMessage(*ntpMessage);
+	sendMessage(ntpResponse);
 }

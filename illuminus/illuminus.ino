@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include "IlluminusDefs.h"
 #include "SingletonManager.h"
 SingletonManager *singleMan = NULL;
 
@@ -122,6 +123,9 @@ void loop() {
 		lastHealthCheck = millis();
 	}
 
+	// Transmit any queued send messageStack
+	singleMan->radioMan()->checkSendWindow();
+
 	// Collect any messages in the queue
 	singleMan->radioMan()->checkRadioForData();
 
@@ -143,14 +147,14 @@ void serverLoop() {
 	singleMan->radioMan()->setMillisOffset(0);
 
 	// Handle any messages in the queue
-	RF24Message *currMessage = singleMan->radioMan()->popMessage();
+	RF24Message *currMessage = singleMan->radioMan()->popMessageReceive();
 	if(currMessage != NULL)
 	{
 		singleMan->healthMan()->updateSentryMessageTime(currMessage->sentrySrcID, millis());
 
 		switch(currMessage->messageType) {
 			case NEW_ADDRESS_REQUEST:
-				singleMan->addrMan()->sendNewAddressResponse(currMessage);
+				singleMan->addrMan()->sendNewAddressResponse();
 				break;
 			case NTP_CLIENT_REQUEST:
 				singleMan->radioMan()->handleNTPClientRequest(currMessage);
@@ -187,10 +191,10 @@ void serverLoop() {
 					int nextSentryToRunNTP = singleMan->healthMan()->getOldestNTPRequest();
 
 					// Fire off a message to the next sentry to run an NTPloop
-					RF24Message ntpStartMessage;
-					ntpStartMessage.messageType = NTP_COORD_MESSAGE;
-					ntpStartMessage.sentrySrcID = singleMan->addrMan()->getAddress();
-					ntpStartMessage.sentryTargetID = nextSentryToRunNTP;
+					RF24Message* ntpStartMessage = new RF24Message();
+					ntpStartMessage->messageType = NTP_COORD_MESSAGE;
+					ntpStartMessage->sentrySrcID = singleMan->addrMan()->getAddress();
+					ntpStartMessage->sentryTargetID = nextSentryToRunNTP;
 
 					singleMan->radioMan()->sendMessage(ntpStartMessage);
 				}
@@ -211,17 +215,17 @@ void serverLoop() {
 				LightPattern* nextPattern = singleMan->lightMan()->getNextPattern();
 
 				// send color updates
-				RF24Message lightMessage;
-				lightMessage.messageType = COLOR_MESSAGE_TO_SENTRY;
-				lightMessage.sentrySrcID = singleMan->addrMan()->getAddress();
-				lightMessage.sentryTargetID = 255;
-				lightMessage.param1_byte = nextPattern->pattern;
-				lightMessage.param2_byte = nextPattern->pattern_param1;
-				lightMessage.param3_byte = nextPattern->pattern_param2;
-				lightMessage.param4_client_end = nextPattern->pattern_param3;
-				lightMessage.param5_client_start = nextPattern->pattern_param4;
-				lightMessage.param6_server_end = nextPattern->pattern_param5;
-				lightMessage.param7_server_start = nextPattern->startTime;
+				RF24Message* lightMessage = new RF24Message();
+				lightMessage->messageType = COLOR_MESSAGE_TO_SENTRY;
+				lightMessage->sentrySrcID = singleMan->addrMan()->getAddress();
+				lightMessage->sentryTargetID = 255;
+				lightMessage->param1_byte = nextPattern->pattern;
+				lightMessage->param2_byte = nextPattern->pattern_param1;
+				lightMessage->param3_byte = nextPattern->pattern_param2;
+				lightMessage->param4_client_end = nextPattern->pattern_param3;
+				lightMessage->param5_client_start = nextPattern->pattern_param4;
+				lightMessage->param6_server_end = nextPattern->pattern_param5;
+				lightMessage->param7_server_start = nextPattern->startTime;
 
 				singleMan->radioMan()->sendMessage(lightMessage);
 				nextPattern->printlnPattern(singleMan, LOG_RADIO);
@@ -230,7 +234,6 @@ void serverLoop() {
 				break;
 		}
 	}
-
 }
 
 
@@ -240,7 +243,7 @@ void sentryLoop() {
 	static unsigned long timeOfLastNTPRequest = 0;
 
 	// check the queue
-	RF24Message *currMessage = singleMan->radioMan()->popMessage();
+	RF24Message *currMessage = singleMan->radioMan()->popMessageReceive();
 	if(currMessage != NULL) {
 
 		bool doEcho = true;
@@ -295,24 +298,26 @@ void sentryLoop() {
 				newPattern = NULL;
 
 				// Send a response back to Server
-				RF24Message responseMessage;
-				responseMessage.messageType = COLOR_MESSAGE_FROM_SENTRY;
-				responseMessage.sentryTargetID = 0;
-				responseMessage.sentrySrcID = singleMan->addrMan()->getAddress();
-				responseMessage.param1_byte = singleMan->inputMan()->getLightLevel();
-				responseMessage.param4_client_end = currMessage->UID;
-				responseMessage.param5_client_start = currMessage->UID;
-				responseMessage.param6_server_end = currMessage->UID;
-				responseMessage.param7_server_start = currMessage->UID;
+				RF24Message* responseMessage = new RF24Message();
+				responseMessage->messageType = COLOR_MESSAGE_FROM_SENTRY;
+				responseMessage->sentryTargetID = 0;
+				responseMessage->sentrySrcID = singleMan->addrMan()->getAddress();
+				responseMessage->param1_byte = singleMan->inputMan()->getLightLevel();
+				responseMessage->param4_client_end = currMessage->UID;
+				responseMessage->param5_client_start = currMessage->UID;
+				responseMessage->param6_server_end = currMessage->UID;
+				responseMessage->param7_server_start = currMessage->UID;
 				singleMan->radioMan()->sendMessage(responseMessage);
 
 				break;
 		}
 
-		if(doEcho)
-			singleMan->radioMan()->echoMessage(*currMessage);
+		if(doEcho) {
+			singleMan->radioMan()->echoMessage(currMessage);
+		} else {
+			delete currMessage;
+		}
 
-		delete currMessage;
 		currMessage = NULL;
 	}
 

@@ -1,6 +1,41 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
+enum Radio_Message_Type:byte {
+	UNDEFINED_MESSAGE,
+	NEW_ADDRESS_REQUEST,
+	NEW_ADDRESS_RESPONSE,
+	NTP_COORD_MESSAGE,
+	NTP_CLIENT_REQUEST,
+	NTP_SERVER_RESPONSE,
+	NTP_CLIENT_FINISHED,
+	COLOR_MESSAGE_TO_SENTRY,
+	COLOR_MESSAGE_FROM_SENTRY
+};
+
+enum OUTPUT_LOG_TYPES:byte {
+	LOG_ERROR,
+	LOG_CLI,
+	LOG_INFO,
+	LOG_DEBUG,
+	LOG_RADIO,
+	LOG_TIMING
+};
+
+enum LightPatternTimingOptions:byte {
+	PATTERN_TIMING_NONE,
+	PATTERN_TIMING_STAGGER,
+	PATTERN_TIMING_ALTERNATE,
+	PATTERN_TIMING_SYNC
+};
+
+enum NTP_state:byte {
+	NTP_DONE,
+	NTP_WAITING_FOR_RESPONSE,
+	NTP_SEND_REQUEST
+};
+
+
 //////////////// DIGITAL PINS
 // #define serialRX 0		// Used for serial debugging
 // #define serialTX 1		// Used for serial debugging

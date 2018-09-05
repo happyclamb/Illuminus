@@ -22,7 +22,7 @@ class AddressManager
 		void setAddress(byte newAddress);
 
 		void obtainAddress();
-		void sendNewAddressResponse(RF24Message* addressResponseMessage);
+		void sendNewAddressResponse();
 
 	private:
 		SingletonManager* singleMan = NULL;

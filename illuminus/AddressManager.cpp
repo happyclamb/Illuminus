@@ -28,11 +28,14 @@ void AddressManager::setAddress(byte newAddress) {
 
 
 void AddressManager::sendAddressRequest() {
-	RF24Message addressRequestMessage;
-	addressRequestMessage.messageType = NEW_ADDRESS_REQUEST;
-	addressRequestMessage.sentrySrcID = 255;
-	addressRequestMessage.sentryTargetID = 0;
+	RF24Message* addressRequestMessage = new RF24Message();
+	addressRequestMessage->messageType = NEW_ADDRESS_REQUEST;
+	addressRequestMessage->sentrySrcID = 255;
+	addressRequestMessage->sentryTargetID = 0;
 	singleMan->radioMan()->sendMessage(addressRequestMessage);
+
+	// force a send of the message
+	singleMan->radioMan()->checkSendWindow();
 
 	unsigned long requestStart = millis() + singleMan->radioMan()->ntpRequestTimeout();
 	while(hasAddress() == false && millis() < requestStart)
@@ -40,8 +43,8 @@ void AddressManager::sendAddressRequest() {
 		singleMan->radioMan()->checkRadioForData();
 
 		// Peeking because later we'll want to process collected messages
-		RF24Message* currMessage = singleMan->radioMan()->peekMessage();
-		if(currMessage != NULL && (currMessage->messageType == NEW_ADDRESS_RESPONSE)) {
+		RF24Message* currMessage = singleMan->radioMan()->peekMessage(NEW_ADDRESS_RESPONSE);
+		if(currMessage != NULL) {
 			setAddress(currMessage->param1_byte);
 		}
 	}
@@ -75,15 +78,16 @@ void AddressManager::obtainAddress() {
 }
 
 
-void AddressManager::sendNewAddressResponse(RF24Message* addressResponseMessage) {
+void AddressManager::sendNewAddressResponse() {
 	byte targetSentry = singleMan->healthMan()->nextAvailSentryID();
 
+	singleMan->healthMan()->setLastAddressAllocated(targetSentry);
+
+	RF24Message* addressResponseMessage = new RF24Message();
 	addressResponseMessage->messageType = NEW_ADDRESS_RESPONSE;
 	addressResponseMessage->sentrySrcID = singleMan->addrMan()->getAddress();
 	addressResponseMessage->sentryTargetID = 255;
 	addressResponseMessage->param1_byte = targetSentry;
 
-	singleMan->healthMan()->setLastAddressAllocated(targetSentry);
-
-	singleMan->radioMan()->sendMessage(*addressResponseMessage);
+	singleMan->radioMan()->sendMessage(addressResponseMessage);
 }

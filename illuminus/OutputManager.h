@@ -3,15 +3,6 @@
 
 #include <Arduino.h>
 
-typedef enum {
-	LOG_ERROR,
-	LOG_CLI,
-	LOG_INFO,
-	LOG_DEBUG,
-	LOG_RADIO,
-	LOG_TIMING
-} OUTPUT_LOG_TYPES;
-
 #include "SingletonManager.h"
 class SingletonManager;
 
