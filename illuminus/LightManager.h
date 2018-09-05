@@ -67,7 +67,7 @@ class LightManager {
 		float cosFade(unsigned long currTime, int brightnessSpeed);
 
 		void checkForPatternUpdate();
-		void noAddressPattern();
+		void initializingPattern(byte init_state);
 		void updateLEDArrayFromCurrentPattern();
 
 		void debugPattern();

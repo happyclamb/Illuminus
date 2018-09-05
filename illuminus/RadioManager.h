@@ -30,6 +30,7 @@ class RadioManager
 
 		unsigned long getAdjustedMillis() { return millis() + currentMillisOffset; }
 		void setMillisOffset(long newOffset) { currentMillisOffset = newOffset; }
+		long getMillisOffset() { return currentMillisOffset; }
 
 		void checkRadioForData();
 		void checkSendWindow();
@@ -66,7 +67,7 @@ class RadioManager
 		byte TRANSMISSION_WINDOW_SIZE = 6;
 
 		void resetRadio();
-		void transmitStack(MessageStack* messageStack, bool upstream);
+		void transmitStack(MessageStack* messageStack, byte defaultChannel);
 		void queueSendMessage(RF24Message* messageToQueue);
 		void queueReceivedMessage(RF24Message* newMessage);
 

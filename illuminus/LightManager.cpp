@@ -173,10 +173,16 @@ float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
 //*********
 void LightManager::redrawLights() {
 
-	// If there is no address gently pulse blue light
 	if(singleMan->addrMan()->hasAddress() == false) {
-		noAddressPattern();
-	} else {
+		initializingPattern(0);
+	}
+	else if (singleMan->radioMan()->getMillisOffset() == 0
+		&& singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
+	{
+		initializingPattern(1);
+	}
+	else
+	{
 		checkForPatternUpdate();
 		updateLEDArrayFromCurrentPattern();
 	}
@@ -185,14 +191,21 @@ void LightManager::redrawLights() {
 }
 
 
-void LightManager::noAddressPattern() {
+void LightManager::initializingPattern(byte init_state) {
 	int fadeIndex = ( millis() % (300*7) ) / 7;
 
 	if(fadeIndex > 150)
 		fadeIndex = 150 - (fadeIndex-150);
 
+	CRGB fadeColor;
+	// If there is no address gently pulse blue light
+	switch (init_state) {
+		case 0: fadeColor = CRGB(0,0,fadeIndex); break;
+		case 1: fadeColor = CRGB(0,fadeIndex,0); break;
+	}
+
 	for(byte i=0; i<NUM_RGB_LEDS; i++)
-		ledstrip[i] = CRGB(0,0,fadeIndex);
+		ledstrip[i] = fadeColor;
 }
 
 
