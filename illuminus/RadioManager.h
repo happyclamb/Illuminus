@@ -64,10 +64,10 @@ class RadioManager
 
 		unsigned long INTERVAL_BETWEEN_MSGS = 5000;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
-		byte TRANSMISSION_WINDOW_SIZE = 6;
+		byte TRANSMISSION_WINDOW_SIZE = 20;
 
 		void resetRadio();
-		void transmitStack(MessageStack* messageStack, byte defaultChannel);
+		void transmitStack(MessageStack* messageStack, byte transmitChannel);
 		void queueSendMessage(RF24Message* messageToQueue);
 		void queueReceivedMessage(RF24Message* newMessage);
 

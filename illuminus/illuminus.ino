@@ -5,7 +5,7 @@
 SingletonManager *singleMan = NULL;
 
 void setup() {
-	Serial.begin(9600);
+	Serial.begin(115200);
 
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
@@ -239,7 +239,8 @@ void serverLoop() {
 
 
 void sentryLoop() {
-	static NTP_state ntpState = NTP_DONE;
+	// start by broadcasting and syncing clock
+	static NTP_state ntpState = NTP_SEND_REQUEST;
 	static unsigned long timeOfLastNTPRequest = 0;
 
 	// check the queue

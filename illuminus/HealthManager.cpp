@@ -97,25 +97,17 @@ byte HealthManager::getOldestNTPRequest() {
 	// Check healths before looking for IDs
 	checkAllSentryHealth();
 
-	int old_id = 0;
+	byte old_id = 0;
+	unsigned long old_time = millis();
+	while(currNode != NULL) {
 
-	// If an address was handed out recently; try and encourage it to respond with
-	//	an NTP request; but empty address_responded to return to regular pathway
-	if (this->last_address_responded > 0) {
-		old_id = this->last_address_responded;
-		this->last_address_responded = 0;
-	} else {
-		unsigned long old_time = millis();
-		while(currNode != NULL) {
-
-			// Only care about alive sentries
-			if(currNode->health->isAlive && currNode->health->last_NTP_request <= old_time) {
-				old_time = currNode->health->last_NTP_request;
-				old_id = currNode->health->id;
-			}
-
-			currNode = currNode->next;
+		// Only care about alive sentries
+		if(currNode->health->isAlive && currNode->health->last_NTP_request <= old_time) {
+			old_time = currNode->health->last_NTP_request;
+			old_id = currNode->health->id;
 		}
+
+		currNode = currNode->next;
 	}
 
 	return old_id;

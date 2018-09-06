@@ -81,8 +81,6 @@ void AddressManager::obtainAddress() {
 void AddressManager::sendNewAddressResponse() {
 	byte targetSentry = singleMan->healthMan()->nextAvailSentryID();
 
-	singleMan->healthMan()->setLastAddressAllocated(targetSentry);
-
 	RF24Message* addressResponseMessage = new RF24Message();
 	addressResponseMessage->messageType = NEW_ADDRESS_RESPONSE;
 	addressResponseMessage->sentrySrcID = singleMan->addrMan()->getAddress();

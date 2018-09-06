@@ -187,9 +187,11 @@ void RadioManager::queueReceivedMessage(RF24Message *newMessage) {
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++) {
 		if(this->sentUIDs[i] == newMessage->UID) {
 			delete newMessage;
+			return;
 		}
 		if(this->receivedUIDs[i] == newMessage->UID) {
 			delete newMessage;
+			return;
 		}
 	}
 
@@ -244,7 +246,7 @@ RF24Message* RadioManager::popMessageReceive() {
 }
 
 
-void RadioManager::transmitStack(MessageStack* messageStack, byte defaultChannel) {
+void RadioManager::transmitStack(MessageStack* messageStack, byte transmitChannel) {
 
 	if(messageStack->isEmpty() == false) {
 
@@ -259,6 +261,8 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte defaultChannel
 
 		// sending time is about 1.5 ms (1500 microseconds)
 		rf24.stopListening();
+		rf24.closeReadingPipe(transmitChannel);
+		rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
 
 		RF24Message *messageToSend = messageStack->shift();
 		while (messageToSend != NULL) {
@@ -281,19 +285,6 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte defaultChannel
 				singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
 				this->printlnMessage(LOG_RADIO, messageToSend);
 
-				// Get upstream or downstream channel for transmissions
-				byte transmitChannel = defaultChannel;
-				if(messageToSend->messageType == NEW_ADDRESS_REQUEST)
-					transmitChannel = 5;
-				else if(messageToSend->messageType == NEW_ADDRESS_RESPONSE)
-					transmitChannel = 2;
-
-				// TODO need to do something with xmitChannel and NTP request for initial
-				//	sentries
-
-				rf24.closeReadingPipe(transmitChannel);
-				rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
-
 				// If the payload is part of the NTP chain then immediately
 				//	update param times before sending message
 				if(messageToSend->sentrySrcID == singleMan->addrMan()->getAddress()) {
@@ -308,13 +299,13 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte defaultChannel
 					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
 				}
 				rf24.flush_tx();
-				rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
 			}
 
 			delete messageToSend;
 			messageToSend = messageStack->shift();
 		}
 
+		rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
 		rf24.startListening();
 	}
 }
@@ -373,12 +364,20 @@ void RadioManager::checkSendWindow() {
 	}
 
 	if(transmitUp || totalSentries == 1) {
-		transmitStack(this->messageUpstreamStack, address%2 ? 0 : 1);
+		transmitStack(this->messageUpstreamStack, address%2 ? 1 : 2);
 	}
 
 	if(transmitDown) {
 		transmitStack(this->messageDownstreamStack, address%2 ? 3 : 4);
-	} else if(singleMan->addrMan()->hasAddress() == false) {
+	}
+	else if(singleMan->addrMan()->hasAddress() == false) {
+		// no address; so broadcast on channel 5 as it's not part of the windowing scheme
+		transmitStack(this->messageDownstreamStack, 5);
+	}
+	else if(singleMan->radioMan()->getMillisOffset() == 0
+		&& singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
+	{
+		// NTP hasn't finished yet; so broadcast on channel 5 to not clobber others
 		transmitStack(this->messageDownstreamStack, 5);
 	}
 }

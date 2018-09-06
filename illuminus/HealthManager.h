@@ -46,14 +46,12 @@ class HealthManager
 		void checkAllSentryHealth();
 		void printHealth(OUTPUT_LOG_TYPES log_level);
 		unsigned long getDeathOffset() { return deathOffset; }
-		void setLastAddressAllocated(byte newValue) { this->last_address_responded = newValue; }
 
 	private:
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
 		byte sentryCount = 0;
 		unsigned long deathOffset = 300000; // 5min
-		byte last_address_responded = 0;
 
 		void pruneEndSentries();
 		void updateSentryInfo(byte id, unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel);
