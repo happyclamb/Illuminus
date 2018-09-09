@@ -65,6 +65,7 @@ class RadioManager
 		unsigned long INTERVAL_BETWEEN_MSGS = 5000;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
 		byte TRANSMISSION_WINDOW_SIZE = 25;
+		byte PAUSE_TIME_BETWEEN_TRIPLE_SENDS = 3;
 
 		void resetRadio();
 		void transmitStack(MessageStack* messageStack);

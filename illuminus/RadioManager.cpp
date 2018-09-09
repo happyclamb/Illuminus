@@ -261,6 +261,7 @@ void RadioManager::transmitStack(MessageStack* messageStack) {
 		rf24.openWritingPipe(this->pipeAddress);
 
 		RF24Message *messageToSend = messageStack->shift();
+		byte messagesSent = 0;
 		while (messageToSend != NULL) {
 
 			bool doSend = true;
@@ -293,6 +294,16 @@ void RadioManager::transmitStack(MessageStack* messageStack) {
 
 				if(!rf24.write(messageToSend, sizeof(RF24Message))) {
 					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
+				}
+				messagesSent++;
+
+				// Radio buffer size is 3*32bytes; so pause every third messageToEcho
+				//	to allow for the buffer to be cleared and other radios to read their
+				//	radio buffers to minimize lost messages
+				if(messagesSent == 3) {
+					messagesSent = 0;
+					rf24.flush_tx();
+					delay(PAUSE_TIME_BETWEEN_TRIPLE_SENDS);
 				}
 			}
 

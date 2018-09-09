@@ -15,6 +15,7 @@ class RF24Message
 		RF24Message(){}
 		RF24Message(RF24Message* baseMessage);
 
+		// MAX SIZE FOR RF24 is 32bytes
 		Radio_Message_Type messageType = UNDEFINED_MESSAGE; // 1 byte
 		unsigned int UID = 0; // 2 bytes
 

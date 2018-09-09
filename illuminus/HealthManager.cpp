@@ -4,6 +4,9 @@
 #include "SingletonManager.h"
 #include "OutputManager.h"
 
+// https://github.com/maniacbug/MemoryFree
+#include <MemoryFree.h>
+
 HealthManager::HealthManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan),
 	healthQueue(NULL)
@@ -171,18 +174,20 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 	if (singleMan->outputMan()->isLogLevelEnabled(log_level)) {
 		SentryHealthNode *currNode = this->healthQueue;
 		singleMan->outputMan()->println(log_level, F("------- HealthManager -------"));
-		singleMan->outputMan()->print(log_level, F("currTime > "));
+		singleMan->outputMan()->print(log_level, F("currTime> "));
 		singleMan->outputMan()->print(log_level, millis());
-		singleMan->outputMan()->print(log_level, F("  adjustedTime > "));
+		singleMan->outputMan()->print(log_level, F("  adjustedTime> "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->getAdjustedMillis());
-		singleMan->outputMan()->print(log_level, F("  sentryCount > "));
+		singleMan->outputMan()->print(log_level, F("  sentryCount> "));
 		singleMan->outputMan()->print(log_level, sentryCount);
-		singleMan->outputMan()->print(log_level, F("  zone > "));
+		singleMan->outputMan()->print(log_level, F("  zone> "));
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getZone());
-		singleMan->outputMan()->print(log_level, F("  this.address > "));
-		singleMan->outputMan()->println(log_level, singleMan->addrMan()->getAddress());
+		singleMan->outputMan()->print(log_level, F("  this.address> "));
+		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getAddress());
+		singleMan->outputMan()->print(log_level, F("  freeMemory> "));
+		singleMan->outputMan()->println(log_level, freeMemory());
 
-		singleMan->outputMan()->print(log_level, F("    currPattern > "));
+		singleMan->outputMan()->print(log_level, F("    currPattern> "));
 		singleMan->lightMan()->getCurrPattern()->printlnPattern(singleMan, log_level);
 		singleMan->outputMan()->print(log_level, F("    nextPattern > "));
 		singleMan->lightMan()->getNextPattern()->printlnPattern(singleMan, log_level);
