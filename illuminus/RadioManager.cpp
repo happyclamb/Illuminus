@@ -11,11 +11,7 @@
 // http://maniacbug.github.io/RF24/classRF24.html
 RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
 		singleMan(_singleMan),
-		rf24(RF24(radio_ce_pin, radio__cs_pin)),
-		pipeAddresses{ { 0xABCDABCD70LL, 0xABCDABCD73LL, 0xABCDABCD76LL, 0xABCDABCD79LL, 0xABCDABCD7CLL, 0xABCDABCD7FLL },
-		               { 0xBCDABCDA70LL, 0xBCDABCDA73LL, 0xBCDABCDA76LL, 0xBCDABCDA79LL, 0xBCDABCDA7CLL, 0xBCDABCDA7FLL },
-		               { 0xCDABCDAB70LL, 0xCDABCDAB73LL, 0xCDABCDAB76LL, 0xCDABCDAB79LL, 0xCDABCDAB7CLL, 0xCDABCDAB7FLL },
-		               { 0xDABCDABC70LL, 0xDABCDABC73LL, 0xDABCDABC76LL, 0xDABCDABC79LL, 0xDABCDABC7CLL, 0xDABCDABC7FLL } }
+		rf24(RF24(radio_ce_pin, radio__cs_pin))
 {
 	// initialize RF24 radio
 	resetRadio();
@@ -57,7 +53,7 @@ void RadioManager::resetRadio() {
 
 		//	The driver will delay for this duration when stopListening() is called.
 		//		If AutoACK is disabled, this can be set as low as 0.
-		rf24.txDelay = 5;
+		rf24.txDelay = 1;
 
 		// On all devices but Linux and ATTiny, a small delay is added to the CSN toggling function
 		// This is intended to minimise the speed of SPI polling due to radio commands
@@ -86,11 +82,6 @@ void RadioManager::resetRadio() {
 		//rf24_crclength_e 	getCRCLength (void)
 		// rf24.disableCRC();
 
-		// Channel to be transmitting on; default 76
-		// void 	setChannel (uint8_t channel)
-		// uint8_t 	getChannel (void)
-		// rf24.setChannel(5);
-
 		// Long term change to interrups?
 		// http://forcetronic.blogspot.ca/2016/07/using-nrf24l01s-irq-pin-to-generate.html
 		// void 	maskIRQ (bool tx_ok, bool tx_fail, bool rx_ready)
@@ -100,21 +91,21 @@ void RadioManager::resetRadio() {
 		// void 	enableDynamicAck ()
 		// void 	enableAckPayload (void)
 
-		for (byte i=0; i<6; i++) rf24.closeReadingPipe(i);
+		// RF Channel to be transmitting on 0->127; default 76
 		byte currentZone = singleMan->addrMan()->getZone();
+		rf24.setChannel(currentZone*40);
 
-		rf24.openReadingPipe(0, this->pipeAddresses[currentZone][0]);
-		rf24.openReadingPipe(1, this->pipeAddresses[currentZone][1]);
-		rf24.openReadingPipe(2, this->pipeAddresses[currentZone][2]);
-		rf24.openReadingPipe(3, this->pipeAddresses[currentZone][3]);
-		rf24.openReadingPipe(4, this->pipeAddresses[currentZone][4]);
-		rf24.openReadingPipe(5, this->pipeAddresses[currentZone][5]);
+		for (byte i=0; i<6; i++) rf24.closeReadingPipe(i);
+		rf24.openReadingPipe(0, this->pipeAddress);
 
 		// kick off with listening
 		rf24.startListening();
 
 		// https://forum.arduino.cc/index.php?topic=215065.0
 		// http://forum.arduino.cc/index.php?topic=216306.0
+
+		// using channels for message types
+		// https://forum.arduino.cc/index.php?topic=429763.0
 	}
 }
 
@@ -246,7 +237,7 @@ RF24Message* RadioManager::popMessageReceive() {
 }
 
 
-void RadioManager::transmitStack(MessageStack* messageStack, byte transmitChannel) {
+void RadioManager::transmitStack(MessageStack* messageStack) {
 
 	if(messageStack->isEmpty() == false) {
 
@@ -256,13 +247,18 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte transmitChanne
 			resetRadio();
 		}
 
+// singleMan->outputMan()->print(LOG_INFO, F("transmit:: channel> "));
+// singleMan->outputMan()->print(LOG_INFO, transmitChannel);
+// singleMan->outputMan()->print(LOG_INFO, F("  stack_size> "));
+// singleMan->outputMan()->println(LOG_INFO, messageStack->length());
+
 		// Get zone for transmissions
 		byte currentZone = singleMan->addrMan()->getZone();
 
 		// sending time is about 1.5 ms (1500 microseconds)
 		rf24.stopListening();
-		rf24.closeReadingPipe(transmitChannel);
-		rf24.openWritingPipe(this->pipeAddresses[currentZone][transmitChannel]);
+		rf24.closeReadingPipe(0);
+		rf24.openWritingPipe(this->pipeAddress);
 
 		RF24Message *messageToSend = messageStack->shift();
 		while (messageToSend != NULL) {
@@ -282,7 +278,7 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte transmitChanne
 				if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 					nextSentUIDIndex = 0;
 
-				singleMan->outputMan()->print(LOG_RADIO, F("Send Message   "));
+				singleMan->outputMan()->print(LOG_RADIO, F("Send Message  "));
 				this->printlnMessage(LOG_RADIO, messageToSend);
 
 				// If the payload is part of the NTP chain then immediately
@@ -298,14 +294,14 @@ void RadioManager::transmitStack(MessageStack* messageStack, byte transmitChanne
 				if(!rf24.write(messageToSend, sizeof(RF24Message))) {
 					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
 				}
-				rf24.flush_tx();
 			}
 
 			delete messageToSend;
 			messageToSend = messageStack->shift();
 		}
 
-		rf24.openReadingPipe(transmitChannel, this->pipeAddresses[currentZone][transmitChannel]);
+		rf24.flush_tx();
+		rf24.openReadingPipe(0, this->pipeAddress);
 		rf24.startListening();
 	}
 }
@@ -341,44 +337,40 @@ void RadioManager::queueSendMessage(RF24Message* messageToQueue) {
 
 void RadioManager::checkSendWindow() {
 
-	bool transmitUp = false;
-	bool transmitDown = false;
-
-	byte address = singleMan->addrMan()->getAddress();
-	byte totalSentries = singleMan->healthMan()->totalSentries();
-	if(totalSentries > 1 && singleMan->addrMan()->hasAddress() == true) {
-		// total windows is 1 less than total sentries as the endpoints don't need to transmit
-		unsigned long totalWindows = totalSentries - 1;
-		unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-		byte upstreamStep = (currTime%(totalWindows*TRANSMISSION_WINDOW_SIZE))/TRANSMISSION_WINDOW_SIZE;
-		byte downstreamStep = totalWindows - upstreamStep;
-
-		// 0 1 2 3 4 _		UP
-		// _ 1 2 3 4 5		DOWN
-		if(address == upstreamStep) {
-			transmitUp = true;
-		}
-		if(address == downstreamStep) {
-			transmitDown = true;
-		}
-	}
-
-	if(transmitUp || totalSentries == 1) {
-		transmitStack(this->messageUpstreamStack, address%2 ? 1 : 2);
-	}
-
-	if(transmitDown) {
-		transmitStack(this->messageDownstreamStack, address%2 ? 3 : 4);
-	}
-	else if(singleMan->addrMan()->hasAddress() == false) {
-		// no address; so broadcast on channel 5 as it's not part of the windowing scheme
-		transmitStack(this->messageDownstreamStack, 5);
+	bool transmit = false;
+	if(singleMan->addrMan()->hasAddress() == false) {
+		// no address; so broadcast on channel 4 as it's not part of the windowing scheme
+		transmit = true;
 	}
 	else if(singleMan->radioMan()->getMillisOffset() == 0
 		&& singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
 	{
-		// NTP hasn't finished yet; so broadcast on channel 5 to not clobber others
-		transmitStack(this->messageDownstreamStack, 5);
+		// not server and NTP hasn't finished yet; so just broadcast
+		transmit = true;
+	}
+	else {
+
+		byte totalSentries = singleMan->healthMan()->totalSentries();
+		transmit = totalSentries == 1 ? true : false;
+
+		if (totalSentries > 1) {
+			byte windowsOneDirection = (totalSentries-1);
+			byte totalWindows = windowsOneDirection*2;
+			unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
+			byte transmitStep = (currTime%(totalWindows*TRANSMISSION_WINDOW_SIZE))/TRANSMISSION_WINDOW_SIZE;
+
+			byte transmitAddress = transmitStep;
+			if(transmitStep >= totalSentries) {
+				transmitAddress = windowsOneDirection - (transmitAddress - windowsOneDirection);
+			}
+
+			transmit = (transmitAddress == singleMan->addrMan()->getAddress());
+		}
+	}
+
+	if(transmit)   {
+		transmitStack(this->messageUpstreamStack);
+		transmitStack(this->messageDownstreamStack);
 	}
 }
 

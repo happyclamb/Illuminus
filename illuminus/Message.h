@@ -38,8 +38,10 @@ class MessageStack
 		RF24Message* shift(); // pop from start
 		RF24Message* peekMessageType(Radio_Message_Type type); // peek at first message of TYPE
 		bool isEmpty() { return(this->top == NULL); }
+		byte length() { return count; }
 
 	private:
+		byte count = 0;
 		struct MessageStackNode {
         RF24Message* message = NULL;
         MessageStackNode* next = NULL;

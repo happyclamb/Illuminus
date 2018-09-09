@@ -119,7 +119,6 @@ void HealthManager::checkAllSentryHealth() {
 
 	while(currNode != NULL) {
 
-		// double the amout of time we think the sentry will respond in to give wiggle room
 		unsigned long currTime = millis();
 		unsigned long lastRequest = currNode->health->last_message;
 		unsigned long deadTime = lastRequest + this->deathOffset;

@@ -51,7 +51,7 @@ class HealthManager
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
 		byte sentryCount = 0;
-		unsigned long deathOffset = 300000; // 5min
+		unsigned long deathOffset = 180000; // 3 min
 
 		void pruneEndSentries();
 		void updateSentryInfo(byte id, unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel);

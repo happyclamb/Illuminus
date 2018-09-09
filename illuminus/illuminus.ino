@@ -5,7 +5,7 @@
 SingletonManager *singleMan = NULL;
 
 void setup() {
-	Serial.begin(115200);
+	Serial.begin(9600);
 
 	// Create the holder for global objects
 	singleMan = new SingletonManager();
@@ -239,16 +239,18 @@ void serverLoop() {
 
 
 void sentryLoop() {
-	// start by broadcasting and syncing clock
-	static NTP_state ntpState = NTP_SEND_REQUEST;
+	// wait for signal to sync clock
+	static NTP_state ntpState = NTP_DONE;
 	static unsigned long timeOfLastNTPRequest = 0;
 
 	// check the queue
 	RF24Message *currMessage = singleMan->radioMan()->popMessageReceive();
 	if(currMessage != NULL) {
 
-		bool doEcho = true;
 		byte address = singleMan->addrMan()->getAddress();
+
+		// Don't need to echo this message if it is now at final destination
+		bool doEcho = (currMessage->sentryTargetID != address);
 
 		// Update message time of sentry sending message
 		singleMan->healthMan()->updateSentryMessageTime(currMessage->sentrySrcID, millis());
@@ -257,9 +259,6 @@ void sentryLoop() {
 
 			case NEW_ADDRESS_RESPONSE:
 				// Already handled, just ignore it.
-				if(currMessage->sentryTargetID == address) {
-					doEcho = false;
-				}
 				break;
 
 			case NTP_COORD_MESSAGE:
@@ -270,9 +269,6 @@ void sentryLoop() {
 						ntpState = NTP_SEND_REQUEST;
 						timeOfLastNTPRequest = 0;
 					}
-
-					// Don't need to echo this message as it is now at final destination
-					doEcho = false;
 				}
 				break;
 
@@ -281,8 +277,6 @@ void sentryLoop() {
 					if(ntpState == NTP_WAITING_FOR_RESPONSE) {
 						ntpState = singleMan->radioMan()->handleNTPServerResponse(currMessage);
 					}
-					// Don't need to echo this message as it is now complete
-					doEcho = false;
 				}
 				break;
 

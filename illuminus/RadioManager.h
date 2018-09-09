@@ -13,7 +13,7 @@ class MessageStack;
 class SingletonManager;
 
 #define MAX_STORED_MSG_IDS 50
-#define NTP_OFFSET_SUCCESSES_REQUIRED 7
+#define NTP_OFFSET_SUCCESSES_REQUIRED 5
 #define NTP_OFFSET_SUCCESSES_USED 3
 
 class RadioManager
@@ -51,7 +51,7 @@ class RadioManager
 		SingletonManager* singleMan;
 		RF24 rf24;
 		long currentMillisOffset = 0;
-		uint64_t pipeAddresses[4][6];
+		uint64_t pipeAddress = 0xABCDABCD78LL;
 
 		MessageStack* messageReceiveStack = NULL;
 		MessageStack* messageUpstreamStack = NULL;
@@ -64,10 +64,10 @@ class RadioManager
 
 		unsigned long INTERVAL_BETWEEN_MSGS = 5000;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
-		byte TRANSMISSION_WINDOW_SIZE = 20;
+		byte TRANSMISSION_WINDOW_SIZE = 25;
 
 		void resetRadio();
-		void transmitStack(MessageStack* messageStack, byte transmitChannel);
+		void transmitStack(MessageStack* messageStack);
 		void queueSendMessage(RF24Message* messageToQueue);
 		void queueReceivedMessage(RF24Message* newMessage);
 

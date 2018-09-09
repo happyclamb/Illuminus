@@ -37,6 +37,8 @@ void MessageStack::push(RF24Message* newItem) {
 		temp->next = new MessageStackNode();
 		temp->next->message = newItem;
 	}
+
+	this->count++;
 }
 
 // pop from start
@@ -47,6 +49,7 @@ RF24Message* MessageStack::shift() {
 		MessageStackNode *newTop = this->top->next;
 		delete this->top;
 		this->top = newTop;
+		this->count--;
 	}
 	return(returnMessage);
 }
