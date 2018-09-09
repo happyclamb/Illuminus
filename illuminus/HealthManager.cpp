@@ -182,6 +182,8 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->print(log_level, F("  this.address > "));
 		singleMan->outputMan()->println(log_level, singleMan->addrMan()->getAddress());
 
+		singleMan->outputMan()->print(log_level, F("    currPattern > "));
+		singleMan->lightMan()->getCurrPattern()->printlnPattern(singleMan, log_level);
 		singleMan->outputMan()->print(log_level, F("    nextPattern > "));
 		singleMan->lightMan()->getNextPattern()->printlnPattern(singleMan, log_level);
 

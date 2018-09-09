@@ -46,7 +46,8 @@ class LightManager {
 
 		void setBigLightBrightness(byte brightness);
 
-		LightPattern* getNextPattern();
+		LightPattern* getCurrPattern() { return this->currPattern; }
+		LightPattern* getNextPattern() { return this->nextPattern; }
 		void setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level);
 
 		void chooseNewPattern(unsigned long nextPatternTimeOffset = 0); // called from server

@@ -67,12 +67,6 @@ void LightManager::setBigLightBrightness(byte brightness) {
 }
 
 
-// The currently selected NextPattern
-LightPattern* LightManager::getNextPattern() {
-	return(this->nextPattern);
-}
-
-
 // NextPattern is passed to Sentries via radio messages
 void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log_level) {
 	singleMan->outputMan()->println(log_level, F("Setting Next Pattern"));
