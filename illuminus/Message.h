@@ -16,7 +16,7 @@ class RF24Message
 		RF24Message(RF24Message* baseMessage);
 
 		Radio_Message_Type messageType = UNDEFINED_MESSAGE; // 1 byte
-		unsigned long UID = 0; // 4 bytes
+		unsigned int UID = 0; // 2 bytes
 
 		byte sentrySrcID = 0; // 1 byte
 		byte sentryTargetID = 0; // 1 byte

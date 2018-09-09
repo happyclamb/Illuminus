@@ -9,9 +9,9 @@
 #include "Message.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
-RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, uint8_t radio__cs_pin):
+RadioManager::RadioManager(SingletonManager* _singleMan):
 		singleMan(_singleMan),
-		rf24(RF24(radio_ce_pin, radio__cs_pin))
+		rf24(RF24(RADIO_CHIP_ENABLE_PIN, RADIO_CHIP_SELECT_PIN))
 {
 	// initialize RF24 radio
 	resetRadio();
@@ -27,8 +27,8 @@ RadioManager::RadioManager(SingletonManager* _singleMan, uint8_t radio_ce_pin, u
 	// init the sentUIDs array
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++)
 	{
-		this->sentUIDs[i] = 4294967295;
-		this->receivedUIDs[i] = 4294967295;
+		this->sentUIDs[i] = 65535;
+		this->receivedUIDs[i] = 65535;
 	}
 
 	singleMan->setRadioMan(this);
@@ -120,14 +120,14 @@ bool RadioManager::checkForInterference() {
 }
 
 
-unsigned long RadioManager::generateUID() {
-	unsigned long generatedUID;
+unsigned int RadioManager::generateUID() {
+	unsigned int generatedUID;
 
 	if(singleMan->addrMan()->hasAddress()) {
-		generatedUID = ((micros()/(unsigned long)100)*(unsigned long)100);
+		generatedUID = (unsigned int)(((unsigned int)micros()/(unsigned int)100)*(unsigned int)100);
 		generatedUID += singleMan->addrMan()->getAddress();
 	} else {
-		generatedUID = random(2000000000);
+		generatedUID = random(65535);
 	}
 
 	return(generatedUID);
@@ -156,15 +156,6 @@ void RadioManager::checkRadioForData() {
 				}
 			}
 
-			if (singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO)) {
-				if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
-					|| newMessage->sentryTargetID == 255)
-				{
-					singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
-					this->printlnMessage(LOG_RADIO, *newMessage);
-				}
-			}
-
 			this->queueReceivedMessage(newMessage);
 			newMessage = NULL;
 		}
@@ -183,6 +174,15 @@ void RadioManager::queueReceivedMessage(RF24Message *newMessage) {
 		if(this->receivedUIDs[i] == newMessage->UID) {
 			delete newMessage;
 			return;
+		}
+	}
+
+	if (singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO)) {
+		if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
+			|| newMessage->sentryTargetID == 255)
+		{
+			singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
+			this->printlnMessage(LOG_RADIO, *newMessage);
 		}
 	}
 

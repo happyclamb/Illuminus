@@ -28,7 +28,7 @@ void setup() {
 	delay(50); // Wait for light to init before continuing
 
 	// Initialize the RadioManager
-	RadioManager *radioMan = new RadioManager(singleMan, RADIO_CHIP_ENABLE_PIN, RADIO_CHIP_SELECT_PIN);
+	RadioManager *radioMan = new RadioManager(singleMan);
 	delay(50); // Wait for radio to init before continuing
 
 	// Start interrupt handler for LightManagement
