@@ -85,7 +85,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
 		this->nextPattern->pattern_param1 = random(1, 4)*15;
 		this->nextPattern->pattern_param2 = random(0, 3)*4;
-		this->nextPattern->pattern_param3 = random(0, 6);
+		this->nextPattern->pattern_param3 = random(0, 4);
 		this->nextPattern->pattern_param4 = random(1, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
@@ -138,16 +138,16 @@ void LightManager::colorFromWheelPosition(byte wheelPos,
 }
 
 
-float LightManager::cosFade(unsigned long currTime, int brightnessSpeed) {
+float LightManager::cosFade(unsigned long currTime, byte brightnessSpeed) {
 	float cosBright = 1.0;
 	if(brightnessSpeed > 0) {
-			/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
-			cos(0) == 1
-			cos(3.14) == -1
-			cos(6.28) == 1
-			*/
+		/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
+		cos(0) == 1
+		cos(3.14) == -1
+		cos(6.28) == 1
+		*/
 		int totalBrightSteps = 314;
-		int brightnessAngleIndex = (currTime%(totalBrightSteps*brightnessSpeed))/brightnessSpeed;
+		int brightnessAngleIndex = (currTime%(totalBrightSteps*(int)brightnessSpeed))/(int)brightnessSpeed;
 		cosBright = cos(brightnessAngleIndex/50.0) + 1.0;
 
 		// Now the range is from 0.0 -> 2.0
@@ -217,7 +217,7 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 {
 	switch(this->currPattern->pattern) {
 		case 0:
-			debugPattern();
+			bananaGuard();
 			break;
 		case 1:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, currPattern->pattern_param1,
@@ -237,7 +237,7 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 			break;
 		case 5:
 			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
-				50+(currPattern->pattern_param3*20));
+				75+(currPattern->pattern_param3*25));
 			break;
 		case 10:
 			solidColor(currPattern->pattern_param1, currPattern->pattern_param2,
@@ -247,20 +247,20 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 }
 
 
-void LightManager::debugPattern() {
+void LightManager::bananaGuard() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	// Over 2000ms break into 200ms sections (10 total) segments
-	byte litIndex = (currTime%(1200))/200;
+	byte litIndex = (currTime%(6*200))/200;
 
-	// 3 segements at 1200s each
-	byte colorIndex = (currTime%(3600))/1200;
+	// 3 segments at 1200s each
+	byte colorIndex = (currTime%(3*1200))/1200;
 
 	CRGB paramColor;
 	switch(colorIndex) {
-		case 0: paramColor = CRGB(75,0,0); break;
-		case 1: paramColor = CRGB(0,75,0); break;
-		case 2: paramColor = CRGB(0,0,75); break;
+		case 0: paramColor = CRGB(100,  0,  0); break;
+		case 1: paramColor = CRGB(  0,100,  0); break;
+		case 2: paramColor = CRGB(  0,  0,100); break;
 	}
 
 	for(byte i=0; i<NUM_RGB_LEDS; i++) {
@@ -315,19 +315,19 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 
 	byte baseWheel = wheelPos+thisSentryOffset;
 
-	byte numColours;
+	byte numColours = 6;
 	if (insideColors == 0) numColours = 1;
-	else if (insideColors == 1 || insideColors == 3) numColours = 2;
-	else if (insideColors == 2 || insideColors == 4) numColours = 3;
-	else numColours = 6;
+	else if (insideColors == 1 || insideColors == 2) numColours = 2;
 	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / numColours;
 
 	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		byte LEDcolor = baseWheel;
-		if (insideColors == 3 || insideColors == 4)
-			LEDcolor += offsetForLanternLeds*(i/numColours);
-		else
-			LEDcolor += offsetForLanternLeds*(i%numColours);
+		if(numColours > 1) {
+			if (insideColors == 2)
+				LEDcolor += offsetForLanternLeds*(i/numColours);
+			else
+				LEDcolor += offsetForLanternLeds*(i%numColours);
+		}
 
 		ledstrip[i] = colorFromWheelPosition(LEDcolor, brightnessFloat);
 	}
@@ -339,7 +339,7 @@ void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte i
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	float brightnessFloat = this->cosFade(currTime, brightnessSpeed);
 
-	unsigned long colorTimeBetweenSteps = patternSpeed*10;
+	unsigned long colorTimeBetweenSteps = patternSpeed*5;
 	unsigned long totalSteps = singleMan->healthMan()->totalSentries();
 	byte currStep = (currTime%(totalSteps*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 

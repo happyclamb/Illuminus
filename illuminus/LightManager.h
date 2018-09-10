@@ -65,13 +65,13 @@ class LightManager {
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);
-		float cosFade(unsigned long currTime, int brightnessSpeed);
+		float cosFade(unsigned long currTime, byte brightnessSpeed);
 
 		void checkForPatternUpdate();
 		void initializingPattern(byte init_state);
 		void updateLEDArrayFromCurrentPattern();
 
-		void debugPattern();
+		void bananaGuard();
 		void solidColor(byte wheelPos, byte brightness, byte sentyRequested);
 		void solidWheelColorChange(LightPatternTimingOptions timingType,
 			byte patternSpeed, byte brightnessSpeed, byte insideColors);
