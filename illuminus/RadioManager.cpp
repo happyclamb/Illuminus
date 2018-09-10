@@ -34,6 +34,9 @@ RadioManager::RadioManager(SingletonManager* _singleMan):
 	singleMan->setRadioMan(this);
 }
 
+byte RadioManager::receiveStackSize()    { return messageReceiveStack->length(); }
+byte RadioManager::upstreamStackSize()   { return messageUpstreamStack->length(); }
+byte RadioManager::downstreamStackSize() { return messageDownstreamStack->length(); }
 
 void RadioManager::resetRadio() {
 	// Init Radio
@@ -296,19 +299,17 @@ void RadioManager::transmitStack(MessageStack* messageStack) {
 					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
 				}
 				messagesSent++;
-
-				// Radio buffer size is 3*32bytes; so pause every third messageToEcho
-				//	to allow for the buffer to be cleared and other radios to read their
-				//	radio buffers to minimize lost messages
-				if(messagesSent == 3) {
-					messagesSent = 0;
-					rf24.flush_tx();
-					delay(PAUSE_TIME_BETWEEN_TRIPLE_SENDS);
-				}
 			}
 
 			delete messageToSend;
-			messageToSend = messageStack->shift();
+			messageToSend = NULL;
+
+			// Radio buffer size is 3*32bytes; so pause every third messageToEcho
+			//	to allow for the buffer to be cleared and other radios to read their
+			//	radio buffers to minimize lost messages
+			if(messagesSent < 3) {
+				messageToSend = messageStack->shift();
+			}
 		}
 
 		rf24.flush_tx();

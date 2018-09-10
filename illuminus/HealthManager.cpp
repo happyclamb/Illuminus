@@ -5,6 +5,7 @@
 #include "OutputManager.h"
 
 // https://github.com/maniacbug/MemoryFree
+// 52 bytes
 #include <MemoryFree.h>
 
 HealthManager::HealthManager(SingletonManager* _singleMan) :
@@ -186,6 +187,13 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getAddress());
 		singleMan->outputMan()->print(log_level, F("  freeMemory> "));
 		singleMan->outputMan()->println(log_level, freeMemory());
+
+		singleMan->outputMan()->print(log_level, F("stacksize>  receive> "));
+		singleMan->outputMan()->print(log_level, singleMan->radioMan()->receiveStackSize());
+		singleMan->outputMan()->print(log_level, F("  upstream> "));
+		singleMan->outputMan()->print(log_level, singleMan->radioMan()->upstreamStackSize());
+		singleMan->outputMan()->print(log_level, F("  downstream> "));
+		singleMan->outputMan()->println(log_level, singleMan->radioMan()->downstreamStackSize());
 
 		singleMan->outputMan()->print(log_level, F("    currPattern> "));
 		singleMan->lightMan()->getCurrPattern()->printlnPattern(singleMan, log_level);

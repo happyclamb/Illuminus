@@ -47,6 +47,10 @@ class RadioManager
 		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
 		void handleNTPClientRequest(RF24Message* ntpRequest);
 
+		byte receiveStackSize();
+		byte upstreamStackSize();
+		byte downstreamStackSize();
+
 	private:
 		SingletonManager* singleMan;
 		RF24 rf24;
