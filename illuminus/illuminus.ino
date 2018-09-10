@@ -147,10 +147,14 @@ void serverLoop() {
 	singleMan->radioMan()->setMillisOffset(0);
 
 	// Handle any messages in the queue
+	byte address = singleMan->addrMan()->getAddress();
 	RF24Message *currMessage = singleMan->radioMan()->popMessageReceive();
 	if(currMessage != NULL)
 	{
 		singleMan->healthMan()->updateSentryMessageTime(currMessage->sentrySrcID, millis());
+
+		// Don't need to echo this message if it is now at final destination
+		bool doEcho = (currMessage->sentryTargetID != address);
 
 		switch(currMessage->messageType) {
 			case NEW_ADDRESS_REQUEST:
@@ -173,8 +177,13 @@ void serverLoop() {
 				break;
 		}
 
-		// The server never echos messages so cleanup
-		delete currMessage;
+		if(doEcho) {
+			singleMan->radioMan()->echoMessage(currMessage);
+		} else {
+			delete currMessage;
+		}
+
+		currMessage = NULL;
 	}
 
 	// Only send more coord messages if not in the middle ... or a long time has rolled by
@@ -244,10 +253,9 @@ void sentryLoop() {
 	static unsigned long timeOfLastNTPRequest = 0;
 
 	// check the queue
+	byte address = singleMan->addrMan()->getAddress();
 	RF24Message *currMessage = singleMan->radioMan()->popMessageReceive();
 	if(currMessage != NULL) {
-
-		byte address = singleMan->addrMan()->getAddress();
 
 		// Don't need to echo this message if it is now at final destination
 		bool doEcho = (currMessage->sentryTargetID != address);
