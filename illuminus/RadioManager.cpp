@@ -379,7 +379,18 @@ void RadioManager::checkSendWindow() {
 	}
 
 	// Handle transmission
-	if(transmit || limited_transmit)   {
+	if(transmit || limited_transmit) {
+
+		// since this will be fired immediately after receiving a message there
+		//	is a great chance that responding immediately is going to land in another
+		//	window, decrease chances of this by broadcasing in the later half of a
+		//	transmission window.
+		if(limited_transmit &&
+			(this->messageUpstreamStack->isEmpty() == false ||
+				this->messageUpstreamStack->isEmpty() == false))
+		{
+			delay(TRANSMISSION_WINDOW_SIZE/2);
+		}
 		transmitStack(this->messageUpstreamStack, limited_transmit);
 		transmitStack(this->messageDownstreamStack, limited_transmit);
 	}
