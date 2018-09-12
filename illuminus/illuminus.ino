@@ -1,6 +1,3 @@
-#include <Arduino.h>
-
-#include "IlluminusDefs.h"
 #include "SingletonManager.h"
 SingletonManager *singleMan = NULL;
 
@@ -283,7 +280,8 @@ void sentryLoop() {
 			case NTP_SERVER_RESPONSE:
 				if(currMessage->sentryTargetID == address) {
 					if(ntpState == NTP_WAITING_FOR_RESPONSE) {
-						ntpState = singleMan->radioMan()->handleNTPServerResponse(currMessage);
+						long serverOffset = singleMan->radioMan()->calculateOffsetFromNTPResponseFromServer(currMessage);
+						ntpState = singleMan->radioMan()->handleNTPServerOffset(serverOffset);
 					}
 				}
 				break;
@@ -328,8 +326,7 @@ void sentryLoop() {
 	if(ntpState == NTP_WAITING_FOR_RESPONSE) {
 		if(millis() > timeOfLastNTPRequest + singleMan->radioMan()->ntpRequestTimeout()) {
 			singleMan->outputMan()->println(LOG_ERROR, F("NTP Request timeout"));
-			// assume that request has timedout and send another
-			ntpState = NTP_SEND_REQUEST;
+			ntpState = singleMan->radioMan()->handleNTPServerOffset(0);
 		}
 	}
 

@@ -1,6 +1,9 @@
 #ifndef __SINGLETONMANAGER_H__
 #define __SINGLETONMANAGER_H__
 
+#include <Arduino.h>
+#include "IlluminusDefs.h"
+
 #include "OutputManager.h"
 class OutputManager;
 

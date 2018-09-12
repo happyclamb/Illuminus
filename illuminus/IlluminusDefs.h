@@ -6,6 +6,7 @@ enum Radio_Message_Type:byte {
 	NEW_ADDRESS_REQUEST,
 	NEW_ADDRESS_RESPONSE,
 	NTP_COORD_MESSAGE,
+	NTP_RESET_MESSAGE,	// need to investigate how to send this...
 	NTP_CLIENT_REQUEST,
 	NTP_SERVER_RESPONSE,
 	NTP_CLIENT_FINISHED,

@@ -1,12 +1,5 @@
 #include "HealthManager.h"
 
-#include "IlluminusDefs.h"
-#include "SingletonManager.h"
-#include "OutputManager.h"
-
-// https://github.com/maniacbug/MemoryFree
-// 52 bytes
-#include <MemoryFree.h>
 
 HealthManager::HealthManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan),

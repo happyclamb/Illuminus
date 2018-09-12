@@ -1,9 +1,5 @@
 #include "InputManager.h"
-#include "OutputManager.h"
 
-#include "IlluminusDefs.h"
-#include "SingletonManager.h"
-#include "LightManager.h"
 
 InputManager::InputManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)

@@ -1,5 +1,5 @@
 #include "OutputManager.h"
-#include "SingletonManager.h"
+
 
 OutputManager::OutputManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)

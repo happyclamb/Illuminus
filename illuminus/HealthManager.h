@@ -1,9 +1,7 @@
 #ifndef __HEALTHMANAGER_H__
 #define __HEALTHMANAGER_H__
 
-#include <Arduino.h>
-#include "IlluminusDefs.h"
-#include "OutputManager.h"
+#include <MemoryFree.h>		// https://github.com/maniacbug/MemoryFree  (~52 bytes)
 
 #include "SingletonManager.h"
 class SingletonManager;

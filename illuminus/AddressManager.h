@@ -1,12 +1,6 @@
 #ifndef __ADDRESSMANAGER_H__
 #define __ADDRESSMANAGER_H__
 
-#include <Arduino.h>
-#include "IlluminusDefs.h"
-
-#include "RadioManager.h"
-class RF24Message;
-
 #include "SingletonManager.h"
 class SingletonManager;
 

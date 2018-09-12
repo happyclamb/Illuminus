@@ -1,17 +1,13 @@
 #ifndef __LIGHTMANAGER_H__
 #define __LIGHTMANAGER_H__
 
-#define NUM_RGB_LEDS 6
-#define COLOR_STEPS_IN_WHEEL 255
+#include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
 
-#include <Arduino.h>
-#include <FastLED.h>
-
-#include "OutputManager.h"
-#include "IlluminusDefs.h"
 #include "SingletonManager.h"
 class SingletonManager;
 
+#define NUM_RGB_LEDS 6
+#define COLOR_STEPS_IN_WHEEL 255
 
 class LightPattern {
 	public:

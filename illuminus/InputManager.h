@@ -1,13 +1,10 @@
 #ifndef __INPUTMANAGER_H__
 #define __INPUTMANAGER_H__
 
-#define MAX_CLI_INPUT 50
-
-#include <Arduino.h>
-#include "IlluminusDefs.h"
-
 #include "SingletonManager.h"
 class SingletonManager;
+
+#define MAX_CLI_INPUT 32
 
 class InputManager
 {

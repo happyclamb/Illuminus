@@ -1,10 +1,8 @@
 #ifndef __RADIOMANAGER_H__
 #define __RADIOMANAGER_H__
 
-#include <Arduino.h>
-#include "RF24.h"
+#include <RF24.h>
 
-#include "IlluminusDefs.h"
 #include "Message.h"
 class RF24Message;
 class MessageStack;
@@ -43,9 +41,10 @@ class RadioManager
 		void echoMessage(RF24Message* messageToEcho);
 		void printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message message);
 
+		void handleNTPClientRequest(RF24Message* ntpMessage);
 		NTP_state sendNTPRequestToServer();
-		NTP_state handleNTPServerResponse(RF24Message* ntpMessage);
-		void handleNTPClientRequest(RF24Message* ntpRequest);
+		NTP_state handleNTPServerOffset(long serverNTPOffset);
+		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 
 		byte receiveStackSize();
 		byte upstreamStackSize();
@@ -72,11 +71,9 @@ class RadioManager
 		byte PAUSE_TIME_BETWEEN_TRIPLE_SENDS = 3;
 
 		void resetRadio();
-		void transmitStack(MessageStack* messageStack);
+		void transmitStack(MessageStack* messageStack, bool limited_transmit);
 		void queueSendMessage(RF24Message* messageToQueue);
 		void queueReceivedMessage(RF24Message* newMessage);
-
-		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 };
 
 #endif // __RADIOMANAGER_H__

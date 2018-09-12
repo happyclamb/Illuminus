@@ -1,12 +1,5 @@
 #include "LightManager.h"
 
-#include <Arduino.h>
-#include <FastLED.h>		// http://fastled.io/docs/3.1/annotated.html
-
-#include "IlluminusDefs.h"
-#include "OutputManager.h"
-#include "SingletonManager.h"
-
 
 void LightPattern::update(LightPattern* newPattern) {
 	this->pattern = newPattern->pattern;

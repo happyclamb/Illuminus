@@ -1,8 +1,5 @@
 #include "AddressManager.h"
 
-#include "IlluminusDefs.h"
-#include "SingletonManager.h"
-#include "RadioManager.h"
 
 AddressManager::AddressManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)

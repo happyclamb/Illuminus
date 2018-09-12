@@ -1,12 +1,5 @@
 #include "RadioManager.h"
 
-#include <SPI.h>
-#include "nRF24L01.h"
-#include "RF24.h"
-
-#include "IlluminusDefs.h"
-#include "SingletonManager.h"
-#include "Message.h"
 
 // http://maniacbug.github.io/RF24/classRF24.html
 RadioManager::RadioManager(SingletonManager* _singleMan):
@@ -184,7 +177,8 @@ void RadioManager::queueReceivedMessage(RF24Message *newMessage) {
 		if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()
 			|| newMessage->sentryTargetID == 255)
 		{
-			singleMan->outputMan()->print(LOG_RADIO, F("Radio Received "));
+			singleMan->outputMan()->print(LOG_RADIO, millis());
+			singleMan->outputMan()->print(LOG_RADIO, F("  Radio Receive "));
 			this->printlnMessage(LOG_RADIO, *newMessage);
 		}
 	}
@@ -240,7 +234,7 @@ RF24Message* RadioManager::popMessageReceive() {
 }
 
 
-void RadioManager::transmitStack(MessageStack* messageStack) {
+void RadioManager::transmitStack(MessageStack* messageStack, bool limited_transmit) {
 
 	if(messageStack->isEmpty() == false) {
 
@@ -250,20 +244,13 @@ void RadioManager::transmitStack(MessageStack* messageStack) {
 			resetRadio();
 		}
 
-// singleMan->outputMan()->print(LOG_INFO, F("transmit:: channel> "));
-// singleMan->outputMan()->print(LOG_INFO, transmitChannel);
-// singleMan->outputMan()->print(LOG_INFO, F("  stack_size> "));
-// singleMan->outputMan()->println(LOG_INFO, messageStack->length());
-
-		// Get zone for transmissions
-		byte currentZone = singleMan->addrMan()->getZone();
-
 		// sending time is about 1.5 ms (1500 microseconds)
 		rf24.stopListening();
 		rf24.closeReadingPipe(0);
 		rf24.openWritingPipe(this->pipeAddress);
 
 		RF24Message *messageToSend = messageStack->shift();
+		byte address = singleMan->addrMan()->getAddress();
 		byte messagesSent = 0;
 		while (messageToSend != NULL) {
 
@@ -282,23 +269,33 @@ void RadioManager::transmitStack(MessageStack* messageStack) {
 				if(nextSentUIDIndex == MAX_STORED_MSG_IDS)
 					nextSentUIDIndex = 0;
 
-				singleMan->outputMan()->print(LOG_RADIO, F("Send Message  "));
-				this->printlnMessage(LOG_RADIO, messageToSend);
+				// If in limited transmit mode only allow NEW_ADDRESS_REQUEST requests
+				//	or ones sent by this lantern.
+				//	Still delete other messages to prevent stack from overflowing
+				if(limited_transmit == false || limited_transmit && (
+						messageToSend->messageType == NEW_ADDRESS_REQUEST ||
+						messageToSend->sentrySrcID == address
+					))
+				{
+					singleMan->outputMan()->print(LOG_RADIO, millis());
+					singleMan->outputMan()->print(LOG_RADIO, F("  Radio Send    "));
+					this->printlnMessage(LOG_RADIO, messageToSend);
 
-				// If the payload is part of the NTP chain then immediately
-				//	update param times before sending message
-				if(messageToSend->sentrySrcID == singleMan->addrMan()->getAddress()) {
-					if(messageToSend->messageType == NTP_CLIENT_REQUEST) {
-						messageToSend->param5_client_start = millis();
-					} else if(messageToSend->messageType == NTP_SERVER_RESPONSE) {
-						messageToSend->param6_server_end = millis();
+					// If the payload is part of the NTP chain then immediately
+					//	update param times before sending message
+					if(messageToSend->sentrySrcID == address) {
+						if(messageToSend->messageType == NTP_CLIENT_REQUEST) {
+							messageToSend->param5_client_start = millis();
+						} else if(messageToSend->messageType == NTP_SERVER_RESPONSE) {
+							messageToSend->param6_server_end = millis();
+						}
 					}
-				}
 
-				if(!rf24.write(messageToSend, sizeof(RF24Message))) {
-					singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
+					if(!rf24.write(messageToSend, sizeof(RF24Message))) {
+						singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
+					}
+					messagesSent++;
 				}
-				messagesSent++;
 			}
 
 			delete messageToSend;
@@ -350,15 +347,16 @@ void RadioManager::queueSendMessage(RF24Message* messageToQueue) {
 void RadioManager::checkSendWindow() {
 
 	bool transmit = false;
+	bool limited_transmit = false;
 	if(singleMan->addrMan()->hasAddress() == false) {
 		// no address; so broadcast on channel 4 as it's not part of the windowing scheme
-		transmit = true;
+		limited_transmit = true;
 	}
 	else if(singleMan->radioMan()->getMillisOffset() == 0
 		&& singleMan->healthMan()->getServerAddress() != singleMan->addrMan()->getAddress())
 	{
 		// not server and NTP hasn't finished yet; so just broadcast
-		transmit = true;
+		limited_transmit = true;
 	}
 	else {
 
@@ -380,9 +378,10 @@ void RadioManager::checkSendWindow() {
 		}
 	}
 
-	if(transmit)   {
-		transmitStack(this->messageUpstreamStack);
-		transmitStack(this->messageDownstreamStack);
+	// Handle transmission
+	if(transmit || limited_transmit)   {
+		transmitStack(this->messageUpstreamStack, limited_transmit);
+		transmitStack(this->messageDownstreamStack, limited_transmit);
 	}
 }
 
@@ -403,53 +402,64 @@ NTP_state RadioManager::sendNTPRequestToServer() {
 	return(NTP_WAITING_FOR_RESPONSE);
 }
 
-NTP_state RadioManager::handleNTPServerResponse(RF24Message* ntpMessage) {
+NTP_state RadioManager::handleNTPServerOffset(long serverNTPOffset) {
 	static long offsetCollection[NTP_OFFSET_SUCCESSES_REQUIRED];
 	static byte currOffsetIndex = 0;
+	static byte fails = 0;
 
 	NTP_state returnState = NTP_SEND_REQUEST;
 
-	long ntpOffset = calculateOffsetFromNTPResponseFromServer(ntpMessage);
-	if(ntpOffset != 0)
-	{
-		offsetCollection[currOffsetIndex] = ntpOffset;
-		currOffsetIndex++;
+	// Timeout is marked by passing 0 to this function
+	if(serverNTPOffset == 0) {
+		fails++;
 
-		// Once there are OFFSET_SUCCESSES offsets, average and set it.
-		if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
-
-			for(byte i=1; i<NTP_OFFSET_SUCCESSES_REQUIRED; ++i)
-			{
-					for(byte j=0;j<(NTP_OFFSET_SUCCESSES_REQUIRED-i);++j)
-							if(offsetCollection[j] > offsetCollection[j+1])
-							{
-									long temp = offsetCollection[j];
-									offsetCollection[j] = offsetCollection[j+1];
-									offsetCollection[j+1] = temp;
-							}
-			}
-
-			int excludeCount = (NTP_OFFSET_SUCCESSES_REQUIRED - NTP_OFFSET_SUCCESSES_USED) / 2;
-
-			long long summedOffset = 0;
-			for(byte i=excludeCount; i<(excludeCount+NTP_OFFSET_SUCCESSES_USED); i++)
-				summedOffset += offsetCollection[i];
-
-			long averagedOffset = summedOffset/(long)NTP_OFFSET_SUCCESSES_USED;
-			this->setMillisOffset(averagedOffset);
-
-			// Tell the server that syncronization has happened.
-			RF24Message* ntpClientFinished = new RF24Message();
-			ntpClientFinished->messageType = NTP_CLIENT_FINISHED;
-			ntpClientFinished->sentrySrcID = singleMan->addrMan()->getAddress();
-			ntpClientFinished->sentryTargetID = 0;
-			ntpClientFinished->param5_client_start = averagedOffset;
-			sendMessage(ntpClientFinished);
-
-			// reset variables to wait for next NTP sync
+		// If there are 3 fails; then reset internal variables and
+		//	stop the round of NTP. Wait until next NTP_COORD_MESSAGE
+		//	as likely	the server has died.
+		if(fails == 3) {
+			fails = 0;
 			currOffsetIndex = 0;
 			returnState = NTP_DONE;
 		}
+	} else {
+		offsetCollection[currOffsetIndex] = serverNTPOffset;
+		currOffsetIndex++;
+	}
+
+	// Once there are OFFSET_SUCCESSES offsets, average and set it.
+	if(currOffsetIndex == NTP_OFFSET_SUCCESSES_REQUIRED) {
+
+		for(byte i=1; i<NTP_OFFSET_SUCCESSES_REQUIRED; ++i)
+		{
+				for(byte j=0;j<(NTP_OFFSET_SUCCESSES_REQUIRED-i);++j)
+						if(offsetCollection[j] > offsetCollection[j+1])
+						{
+								long temp = offsetCollection[j];
+								offsetCollection[j] = offsetCollection[j+1];
+								offsetCollection[j+1] = temp;
+						}
+		}
+
+		int excludeCount = (NTP_OFFSET_SUCCESSES_REQUIRED - NTP_OFFSET_SUCCESSES_USED) / 2;
+
+		long long summedOffset = 0;
+		for(byte i=excludeCount; i<(excludeCount+NTP_OFFSET_SUCCESSES_USED); i++)
+			summedOffset += offsetCollection[i];
+
+		long averagedOffset = summedOffset/(long)NTP_OFFSET_SUCCESSES_USED;
+		this->setMillisOffset(averagedOffset);
+
+		// Tell the server that syncronization has happened.
+		RF24Message* ntpClientFinished = new RF24Message();
+		ntpClientFinished->messageType = NTP_CLIENT_FINISHED;
+		ntpClientFinished->sentrySrcID = singleMan->addrMan()->getAddress();
+		ntpClientFinished->sentryTargetID = 0;
+		ntpClientFinished->param5_client_start = averagedOffset;
+		sendMessage(ntpClientFinished);
+
+		// reset variables to wait for next NTP sync
+		currOffsetIndex = 0;
+		returnState = NTP_DONE;
 	}
 
 	return(returnState);

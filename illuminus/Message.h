@@ -1,11 +1,6 @@
 #ifndef __MESSAGE_H__
 #define __MESSAGE_H__
 
-#include <Arduino.h>
-#include "RF24.h"
-
-#include "IlluminusDefs.h"
-
 #include "SingletonManager.h"
 class SingletonManager;
 

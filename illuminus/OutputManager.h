@@ -1,8 +1,6 @@
 #ifndef __OUTPUTMANAGER_H__
 #define __OUTPUTMANAGER_H__
 
-#include <Arduino.h>
-
 #include "SingletonManager.h"
 class SingletonManager;
 

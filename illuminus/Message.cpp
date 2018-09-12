@@ -1,12 +1,5 @@
 #include "Message.h"
 
-#include <SPI.h>
-#include "nRF24L01.h"
-#include "RF24.h"
-
-#include "IlluminusDefs.h"
-#include "SingletonManager.h"
-
 
 RF24Message::RF24Message(RF24Message* baseMessage) {
 	messageType = baseMessage->messageType;
