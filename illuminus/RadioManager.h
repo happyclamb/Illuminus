@@ -21,8 +21,9 @@ class RadioManager
 
 		unsigned int generateUID();
 
-		unsigned long getIntervalBroadcastMessages(){ return this->INTERVAL_BETWEEN_MSGS; }
-		void setIntervalBroadcastMessages(unsigned long newInterval){ this->INTERVAL_BETWEEN_MSGS = newInterval; }
+		unsigned long getIntervalNPTCoordMessages(){ return this->INTERVAL_NTP_COORD_MSGS; }
+		unsigned long getIntervalColorMessages(){ return this->INTERVAL_COLOR_MSGS; }
+		void setIntervalColorMessages(unsigned long newInterval){ this->INTERVAL_COLOR_MSGS = newInterval; }
 
 		unsigned long ntpRequestTimeout(){ return this->NTP_REQUEST_TIMEOUT; }
 
@@ -47,8 +48,7 @@ class RadioManager
 		long calculateOffsetFromNTPResponseFromServer(RF24Message* ntpMessage);
 
 		byte receiveStackSize();
-		byte upstreamStackSize();
-		byte downstreamStackSize();
+		byte sendStackSize();
 
 	private:
 		SingletonManager* singleMan;
@@ -57,21 +57,21 @@ class RadioManager
 		uint64_t pipeAddress = 0xABCDABCD78LL;
 
 		MessageStack* messageReceiveStack = NULL;
-		MessageStack* messageUpstreamStack = NULL;
-		MessageStack* messageDownstreamStack = NULL;
+		MessageStack* messageSendStack = NULL;
 
 		unsigned int sentUIDs[MAX_STORED_MSG_IDS];
 		byte nextSentUIDIndex = 0;
 		unsigned int receivedUIDs[MAX_STORED_MSG_IDS];
 		byte nextReceivedUIDIndex = 0;
 
-		unsigned long INTERVAL_BETWEEN_MSGS = 5000;
+		unsigned long INTERVAL_COLOR_MSGS = 1500;
+		unsigned long INTERVAL_NTP_COORD_MSGS = 7300;
 		unsigned long NTP_REQUEST_TIMEOUT = 2500;
 		byte TRANSMISSION_WINDOW_SIZE = 25;
 		byte PAUSE_TIME_BETWEEN_TRIPLE_SENDS = 3;
 
 		void resetRadio();
-		void transmitStack(MessageStack* messageStack, bool limited_transmit);
+		void transmitStack(bool limited_transmit);
 		void queueSendMessage(RF24Message* messageToQueue);
 		void queueReceivedMessage(RF24Message* newMessage);
 };

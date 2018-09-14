@@ -244,10 +244,10 @@ void LightManager::bananaGuard() {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	// Over 2000ms break into 200ms sections (10 total) segments
-	byte litIndex = (currTime%(6*200))/200;
+	byte litIndex = (currTime%(6*125))/125;
 
 	// 3 segments at 1200s each
-	byte colorIndex = (currTime%(3*1200))/1200;
+	byte colorIndex = (currTime%(3*750))/750;
 
 	CRGB paramColor;
 	switch(colorIndex) {

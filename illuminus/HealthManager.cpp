@@ -183,10 +183,8 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 
 		singleMan->outputMan()->print(log_level, F("stacksize>  receive> "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->receiveStackSize());
-		singleMan->outputMan()->print(log_level, F("  upstream> "));
-		singleMan->outputMan()->print(log_level, singleMan->radioMan()->upstreamStackSize());
-		singleMan->outputMan()->print(log_level, F("  downstream> "));
-		singleMan->outputMan()->println(log_level, singleMan->radioMan()->downstreamStackSize());
+		singleMan->outputMan()->print(log_level, F("  send> "));
+		singleMan->outputMan()->println(log_level, singleMan->radioMan()->sendStackSize());
 
 		singleMan->outputMan()->print(log_level, F("    currPattern> "));
 		singleMan->lightMan()->getCurrPattern()->printlnPattern(singleMan, log_level);

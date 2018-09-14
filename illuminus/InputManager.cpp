@@ -48,8 +48,10 @@ void InputManager::updateValues() {
 		button2_pressed = true;
 
 	// Analog inputs (value 0->1023)
-	static unsigned long lastRead = 0;
-	if(millis() > (lastRead + 250)) {
+	static unsigned long nextRead = 0;
+	if(millis() > nextRead) {
+		nextRead = millis() + READ_FREQUENCY;
+
 		lightLevel[inputIndex]  = map(analogRead(LIGHT_SENSOR_A1_PIN), 0, 1023, 0, 255);
 		soundLevel[inputIndex]  = map(analogRead(SOUND_SENSOR_A2_PIN), 0, 1023, 0, 255);
 		motionLevel[inputIndex] = map(analogRead(MOTION_SENSOR_A3_PIN), 0, 1023, 0, 255);
@@ -67,7 +69,6 @@ void InputManager::updateValues() {
 		this->soundLevel_avg = soundLevel_sum / 5;
 
 		// Advance to next index
-		lastRead = millis();
 		if(++inputIndex == 5) inputIndex = 0;
 	}
 }
@@ -103,15 +104,15 @@ void InputManager::processIncomingByte(const byte inByte) {
 void InputManager::showOptions() {
 	Serial.println(F("C&C Lantern CLI"));
 	Serial.println(F("Options::"));
-	Serial.println(F("b #      update brightness of big LED"));
-	Serial.println(F("l        show current log levels"));
-	Serial.println(F("l #      toggle log level [info|debug|timing]"));
-	Serial.println(F("h        Health of lanterns in network"));
-	Serial.println(F("i        Interactive mode"));
-	Serial.println(F("a        Auto choose patterns"));
-	Serial.println(F("p # # #  Pattern with parameters"));
-	Serial.println(F("d #      update pattern Duration"));
-	Serial.println(F("f #      broadcast updates Frequency"));
+	Serial.println(F("b #    update brightness of big LED"));
+	Serial.println(F("l      show current log levels"));
+	Serial.println(F("l #    toggle log level [info|debug|timing]"));
+	Serial.println(F("h      Health of lanterns in network"));
+	Serial.println(F("i      Interactive mode"));
+	Serial.println(F("a      Auto choose patterns"));
+	Serial.println(F("p # #  Pattern with parameters"));
+	Serial.println(F("d #    update pattern Duration"));
+	Serial.println(F("f #    color updates Frequency"));
 }
 
 void InputManager::setPattern(const char * data) {
@@ -223,9 +224,9 @@ void InputManager::processData(const char * data) {
 			}
 			case 'f': {
 				unsigned long newFrequency = atol(&data[2]);
-				Serial.print(F("Updated broadcast updates frequency >> "));
+				Serial.print(F("Updated color updates frequency >> "));
 				Serial.println(newFrequency);
-				singleMan->radioMan()->setIntervalBroadcastMessages(newFrequency);
+				singleMan->radioMan()->setIntervalColorMessages(newFrequency);
 				return;
 			}
 		}

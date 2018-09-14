@@ -11,8 +11,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan):
 
 	// init stacks
 	messageReceiveStack = new MessageStack();
-	messageUpstreamStack = new MessageStack();
-	messageDownstreamStack = new MessageStack();
+	messageSendStack = new MessageStack();
 
 	// Use some vaguely random read to seed the lanterns
 	randomSeed(analogRead(LIGHT_SENSOR_A1_PIN));
@@ -28,8 +27,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan):
 }
 
 byte RadioManager::receiveStackSize()    { return messageReceiveStack->length(); }
-byte RadioManager::upstreamStackSize()   { return messageUpstreamStack->length(); }
-byte RadioManager::downstreamStackSize() { return messageDownstreamStack->length(); }
+byte RadioManager::sendStackSize()   { return messageSendStack->length(); }
 
 void RadioManager::resetRadio() {
 	// Init Radio
@@ -142,16 +140,19 @@ void RadioManager::checkRadioForData() {
 			RF24Message* newMessage = new RF24Message();
 			rf24.read(newMessage, sizeof(RF24Message));
 
-			// If the payload is part of the NTP chain then immediately
-			//	update server_start time param times when the target sentry gets it's data
-			if(newMessage->sentryTargetID == singleMan->addrMan()->getAddress()) {
-				if(newMessage->messageType == NTP_CLIENT_REQUEST) {
-					newMessage->param7_server_start = millis();
-				} else if(newMessage->messageType == NTP_SERVER_RESPONSE) {
-					newMessage->param4_client_end = millis();
-				}
+			// If the payload is part of the NTP chain then immediately update time param times
+			if(newMessage->messageType == NTP_CLIENT_REQUEST &&
+				singleMan->addrMan()->getAddress() == singleMan->healthMan()->getServerAddress())
+			{
+				newMessage->param7_server_start = millis();
+			}
+			else if(newMessage->messageType == NTP_SERVER_RESPONSE &&
+				newMessage->sentryTargetID == singleMan->addrMan()->getAddress())
+			{
+				newMessage->param4_client_end = millis();
 			}
 
+			// Queue the received message
 			this->queueReceivedMessage(newMessage);
 			newMessage = NULL;
 		}
@@ -197,14 +198,14 @@ void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message messag
 
 		if (singleMan->outputMan()->isLogLevelEnabled(LOG_DEBUG)) {
 			switch (message.messageType) {
-				case NEW_ADDRESS_REQUEST:        singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_REQUEST  "));  break;
-				case NEW_ADDRESS_RESPONSE:       singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_RESPONSE "));  break;
-				case NTP_COORD_MESSAGE:          singleMan->outputMan()->print(LOG_DEBUG, F("NTP_COORD_MESSAGE    "));  break;
-				case NTP_CLIENT_REQUEST:         singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_REQUEST   "));  break;
-				case NTP_SERVER_RESPONSE:        singleMan->outputMan()->print(LOG_DEBUG, F("NTP_SERVER_RESPONSE  "));  break;
-				case NTP_CLIENT_FINISHED:        singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_FINISHED  "));  break;
-				case COLOR_MESSAGE_TO_SENTRY:    singleMan->outputMan()->print(LOG_DEBUG, F("COLOR_MSG_TO_SENTRY  "));  break;
-				case COLOR_MESSAGE_FROM_SENTRY:  singleMan->outputMan()->print(LOG_DEBUG, F("COLOR_MSG_FROM_SENTRY"));  break;
+				case NEW_ADDRESS_REQUEST:      singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_REQUEST "));  break;
+				case NEW_ADDRESS_RESPONSE:     singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_RESPONSE"));  break;
+				case NTP_COORD_MESSAGE:        singleMan->outputMan()->print(LOG_DEBUG, F("NTP_COORD_MESSAGE   "));  break;
+				case NTP_CLIENT_REQUEST:       singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_REQUEST  "));  break;
+				case NTP_SERVER_RESPONSE:      singleMan->outputMan()->print(LOG_DEBUG, F("NTP_SERVER_RESPONSE "));  break;
+				case NTP_CLIENT_FINISHED:      singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_FINISHED "));  break;
+				case COLOR_MESSAGE_TO_SENTRY:  singleMan->outputMan()->print(LOG_DEBUG, F("COLOR_MSG_TO_SENTRY "));  break;
+				case KEEP_ALIVE_FROM_SENTRY:   singleMan->outputMan()->print(LOG_DEBUG, F("SENTRY_KEEP_ALIVE   "));  break;
 			}
 
 			singleMan->outputMan()->print(LOG_DEBUG, F(" UID> "));
@@ -234,9 +235,9 @@ RF24Message* RadioManager::popMessageReceive() {
 }
 
 
-void RadioManager::transmitStack(MessageStack* messageStack, bool limited_transmit) {
+void RadioManager::transmitStack(bool limited_transmit) {
 
-	if(messageStack->isEmpty() == false) {
+	if(messageSendStack->isEmpty() == false) {
 
 		// Check for hardware failure, reset radio - then send message
 		if(rf24.failureDetected) {
@@ -249,7 +250,7 @@ void RadioManager::transmitStack(MessageStack* messageStack, bool limited_transm
 		rf24.closeReadingPipe(0);
 		rf24.openWritingPipe(this->pipeAddress);
 
-		RF24Message *messageToSend = messageStack->shift();
+		RF24Message *messageToSend = messageSendStack->shift();
 		byte address = singleMan->addrMan()->getAddress();
 		byte messagesSent = 0;
 		while (messageToSend != NULL) {
@@ -281,16 +282,19 @@ void RadioManager::transmitStack(MessageStack* messageStack, bool limited_transm
 					singleMan->outputMan()->print(LOG_RADIO, F("  Radio Send    "));
 					this->printlnMessage(LOG_RADIO, messageToSend);
 
-					// If the payload is part of the NTP chain then immediately
-					//	update param times before sending message
-					if(messageToSend->sentrySrcID == address) {
-						if(messageToSend->messageType == NTP_CLIENT_REQUEST) {
-							messageToSend->param5_client_start = millis();
-						} else if(messageToSend->messageType == NTP_SERVER_RESPONSE) {
-							messageToSend->param6_server_end = millis();
-						}
+					// If the payload is part of the NTP chain then immediately update time param times
+					if(messageToSend->messageType == NTP_CLIENT_REQUEST &&
+						messageToSend->sentrySrcID == address)
+					{
+						messageToSend->param5_client_start = millis();
+					}
+					else if(messageToSend->messageType == NTP_SERVER_RESPONSE &&
+						singleMan->addrMan()->getAddress() == singleMan->healthMan()->getServerAddress())
+					{
+						messageToSend->param6_server_end = millis();
 					}
 
+					// Write the message
 					if(!rf24.write(messageToSend, sizeof(RF24Message))) {
 						singleMan->outputMan()->println(LOG_ERROR, F("RADIO ERROR On Write"));
 					}
@@ -305,7 +309,7 @@ void RadioManager::transmitStack(MessageStack* messageStack, bool limited_transm
 			//	to allow for the buffer to be cleared and other radios to read their
 			//	radio buffers to minimize lost messages
 			if(messagesSent < 3) {
-				messageToSend = messageStack->shift();
+				messageToSend = messageSendStack->shift();
 			}
 		}
 
@@ -331,14 +335,11 @@ void RadioManager::echoMessage(RF24Message* messageToEcho) {
 void RadioManager::queueSendMessage(RF24Message* messageToQueue) {
 	byte address = singleMan->addrMan()->getAddress();
 
-	if(messageToQueue->sentrySrcID < messageToQueue->sentryTargetID && address < messageToQueue->sentryTargetID)
-	{
-		// add to upstreamStack
-		this->messageUpstreamStack->push(messageToQueue);
-	}	else if(messageToQueue->sentrySrcID > messageToQueue->sentryTargetID && address > messageToQueue->sentryTargetID)
-	{
-		// add to downstreamStack
-		this->messageDownstreamStack->push(messageToQueue);
+	if(messageToQueue->sentryTargetID == 255 ||
+		(messageToQueue->sentrySrcID < messageToQueue->sentryTargetID && address < messageToQueue->sentryTargetID) ||
+		(messageToQueue->sentrySrcID > messageToQueue->sentryTargetID && address > messageToQueue->sentryTargetID)
+	) {
+		this->messageSendStack->push(messageToQueue);
 	} else {
 		delete messageToQueue;
 	}
@@ -385,14 +386,11 @@ void RadioManager::checkSendWindow() {
 		//	is a great chance that responding immediately is going to land in another
 		//	window, decrease chances of this by broadcasing in the later half of a
 		//	transmission window.
-		if(limited_transmit &&
-			(this->messageUpstreamStack->isEmpty() == false ||
-				this->messageUpstreamStack->isEmpty() == false))
-		{
+		if(limited_transmit && this->messageSendStack->isEmpty() == false) {
 			delay(TRANSMISSION_WINDOW_SIZE/2);
 		}
-		transmitStack(this->messageUpstreamStack, limited_transmit);
-		transmitStack(this->messageDownstreamStack, limited_transmit);
+
+		transmitStack(limited_transmit);
 	}
 }
 
