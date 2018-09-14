@@ -99,7 +99,7 @@ byte HealthManager::getOldestNTPRequest() {
 	while(currNode != NULL) {
 
 		// Only care about alive sentries
-		if(currNode->health->isAlive && currNode->health->last_NTP_request <= old_time) {
+		if(currNode->health->isAlive && currNode->health->last_NTP_request < old_time) {
 			old_time = currNode->health->last_NTP_request;
 			old_id = currNode->health->id;
 		}
