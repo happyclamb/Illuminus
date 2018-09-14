@@ -201,6 +201,7 @@ void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message messag
 				case NEW_ADDRESS_REQUEST:      singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_REQUEST "));  break;
 				case NEW_ADDRESS_RESPONSE:     singleMan->outputMan()->print(LOG_DEBUG, F("NEW_ADDRESS_RESPONSE"));  break;
 				case NTP_COORD_MESSAGE:        singleMan->outputMan()->print(LOG_DEBUG, F("NTP_COORD_MESSAGE   "));  break;
+				case NTP_RESET_MESSAGE:        singleMan->outputMan()->print(LOG_DEBUG, F("NTP_RESET_MESSAGE   "));  break;
 				case NTP_CLIENT_REQUEST:       singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_REQUEST  "));  break;
 				case NTP_SERVER_RESPONSE:      singleMan->outputMan()->print(LOG_DEBUG, F("NTP_SERVER_RESPONSE "));  break;
 				case NTP_CLIENT_FINISHED:      singleMan->outputMan()->print(LOG_DEBUG, F("NTP_CLIENT_FINISHED "));  break;
