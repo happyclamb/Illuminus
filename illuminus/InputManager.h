@@ -24,7 +24,7 @@ class InputManager
 	private:
 		SingletonManager* singleMan = NULL;
 
-		int READ_FREQUENCY = 250;
+		int READ_FREQUENCY = 251;
 
 		byte zoneInput = 0;
 		bool button1_pressed = false;

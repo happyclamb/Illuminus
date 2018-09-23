@@ -1,6 +1,8 @@
 #ifndef __ILLUMINUSDEFS_H__
 #define __ILLUMINUSDEFS_H__
 
+//#define LOG_TIMING_DEFINED
+
 enum Radio_Message_Type:byte {
 	UNDEFINED_MESSAGE,
 	NEW_ADDRESS_REQUEST,
@@ -19,8 +21,10 @@ enum OUTPUT_LOG_TYPES:byte {
 	LOG_CLI,
 	LOG_INFO,
 	LOG_DEBUG,
-	LOG_RADIO,
-	LOG_TIMING
+#ifdef LOG_TIMING_DEFINED
+	LOG_TIMING,
+#endif
+	LOG_RADIO
 };
 
 enum LightPatternTimingOptions:byte {

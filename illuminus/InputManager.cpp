@@ -145,8 +145,10 @@ void InputManager::showLogLevels() {
 	singleMan->outputMan()->isLogLevelEnabled(LOG_DEBUG) ? Serial.println(F("on")) : Serial.println(F("off"));
 	Serial.print(F("   radio:  "));
 	singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO) ? Serial.println(F("on")) : Serial.println(F("off"));
+#ifdef LOG_TIMING_DEFINED
 	Serial.print(F("   timing: "));
 	singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING) ? Serial.println(F("on")) : Serial.println(F("off"));
+#endif
 }
 
 void InputManager::setLogLevel(const char * data){
@@ -157,8 +159,10 @@ void InputManager::setLogLevel(const char * data){
 		log_level = LOG_DEBUG;
 	else if (strcmp(data, "radio") == 0 || strcmp(data, "r") == 0)
 		log_level = LOG_RADIO;
+#ifdef LOG_TIMING_DEFINED
 	else if (strcmp(data, "timing") == 0 || strcmp(data, "t") == 0)
 		log_level = LOG_TIMING;
+#endif
 
 	if(log_level != LOG_CLI) {
 		singleMan->outputMan()->setLogLevel(log_level, !singleMan->outputMan()->isLogLevelEnabled(log_level));

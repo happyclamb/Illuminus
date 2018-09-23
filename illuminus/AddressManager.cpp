@@ -34,7 +34,7 @@ void AddressManager::sendAddressRequest() {
 	// force a send of the message
 	singleMan->radioMan()->checkSendWindow();
 
-	unsigned long requestStart = millis() + singleMan->radioMan()->ntpRequestTimeout();
+	unsigned long requestStart = millis() + this->ADDRESS_REQUEST_TIMEOUT;
 	while(hasAddress() == false && millis() < requestStart)
 	{
 		singleMan->radioMan()->checkRadioForData();

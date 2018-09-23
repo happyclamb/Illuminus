@@ -57,7 +57,7 @@ class LightManager {
 		LightPattern* nextPattern;
 
 		byte number_patterns_defined = 5;
-		unsigned long pattern_duration = 60000; // 1 min
+		unsigned long pattern_duration = 59999; // closest prime to 1 min
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);

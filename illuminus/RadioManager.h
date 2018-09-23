@@ -64,11 +64,10 @@ class RadioManager
 		unsigned int receivedUIDs[MAX_STORED_MSG_IDS];
 		byte nextReceivedUIDIndex = 0;
 
-		unsigned long INTERVAL_COLOR_MSGS = 1500;
-		unsigned long INTERVAL_NTP_COORD_MSGS = 7300;
-		unsigned long NTP_REQUEST_TIMEOUT = 2500;
-		byte TRANSMISSION_WINDOW_SIZE = 25;
-		byte PAUSE_TIME_BETWEEN_TRIPLE_SENDS = 3;
+		unsigned long INTERVAL_COLOR_MSGS = 1511;
+		unsigned long INTERVAL_NTP_COORD_MSGS = 7307;
+		unsigned long NTP_REQUEST_TIMEOUT = 5003;
+		byte TRANSMISSION_WINDOW_SIZE = 23;
 
 		void resetRadio();
 		void transmitStack(bool limited_transmit);

@@ -52,8 +52,9 @@ class OutputManager
 		bool info_enabled = false;
 		bool debug_enabled = false;
 		bool radio_enabled = false;
+#ifdef LOG_TIMING_DEFINED
 		bool timing_enabled = false;
-
+#endif
 		bool showOutput(OUTPUT_LOG_TYPES log_level);
 };
 

@@ -75,7 +75,12 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
+		// Prevent back to back of the same patterns
+		while(this->nextPattern->pattern == this->currPattern->pattern ||
+			(singleMan->healthMan()->totalSentries() < 5 && this->nextPattern->pattern == 5)) {
+			this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
+		}
+
 		this->nextPattern->pattern_param1 = random(1, 4)*15;
 		this->nextPattern->pattern_param2 = random(0, 3)*4;
 		this->nextPattern->pattern_param3 = random(0, 4);

@@ -87,7 +87,7 @@ void RadioManager::resetRadio() {
 
 		// RF Channel to be transmitting on 0->127; default 76
 		byte currentZone = singleMan->addrMan()->getZone();
-		rf24.setChannel(currentZone*40);
+		rf24.setChannel(1 + currentZone*40);
 
 		for (byte i=0; i<6; i++) rf24.closeReadingPipe(i);
 		rf24.openReadingPipe(0, this->pipeAddress);
@@ -121,7 +121,7 @@ unsigned int RadioManager::generateUID() {
 		generatedUID = (unsigned int)(((unsigned int)micros()/(unsigned int)100)*(unsigned int)100);
 		generatedUID += singleMan->addrMan()->getAddress();
 	} else {
-		generatedUID = random(65535);
+		generatedUID = random(65500);
 	}
 
 	return(generatedUID);
@@ -366,14 +366,13 @@ void RadioManager::checkSendWindow() {
 		transmit = totalSentries == 1 ? true : false;
 
 		if (totalSentries > 1) {
-			byte windowsOneDirection = (totalSentries-1);
-			byte totalWindows = windowsOneDirection*2;
 			unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-			byte transmitStep = (currTime%(totalWindows*TRANSMISSION_WINDOW_SIZE))/TRANSMISSION_WINDOW_SIZE;
+			byte transmitStep = (currTime%(2*totalSentries*TRANSMISSION_WINDOW_SIZE))/TRANSMISSION_WINDOW_SIZE;
 
+			// Intentially give a double window at start and end of the line
 			byte transmitAddress = transmitStep;
 			if(transmitStep >= totalSentries) {
-				transmitAddress = windowsOneDirection - (transmitAddress - windowsOneDirection);
+				transmitAddress = totalSentries - (transmitAddress - totalSentries);
 			}
 
 			transmit = (transmitAddress == singleMan->addrMan()->getAddress());
@@ -477,6 +476,7 @@ NTP_state RadioManager::handleNTPServerOffset(long serverNTPOffset) {
 
 long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMessage) {
 
+#ifdef LOG_TIMING_DEFINED
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 		singleMan->outputMan()->println(LOG_TIMING, F("*** calculateOffsetFromNTPResponseFromServer"));
 
@@ -491,6 +491,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 		singleMan->outputMan()->print(LOG_TIMING, F(" server_end: "));
 		singleMan->outputMan()->println(LOG_TIMING, ntpMessage->param6_server_end);
 	}
+#endif
 
 	/* Have enough data to Do The Math
 			https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
@@ -507,6 +508,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	long long offset_LL = (t1_t0 + t2_t3);
 	long offset = (long) (offset_LL / 2);
 
+#ifdef LOG_TIMING_DEFINED
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 			singleMan->outputMan()->print(LOG_TIMING, F("t1_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t1_t0);
@@ -517,6 +519,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 		singleMan->outputMan()->print(LOG_TIMING, F(" offset: "));
 		singleMan->outputMan()->println(LOG_TIMING, offset);
 	}
+#endif
 
 	//	long halfRtripDelay = ((timeData.client_end - timeData.client_start) - (timeData.server_end - timeData.server_start)) / 2;
 	long t3_t0 = ntpMessage->param4_client_end - ntpMessage->param5_client_start;
@@ -526,6 +529,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 	// Update offset to use the delay
 	offset = offset + halfRtripDelay;
 
+#ifdef LOG_TIMING_DEFINED
 	if(singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING)) {
 		singleMan->outputMan()->print(LOG_TIMING, F("t3_t0: "));
 		singleMan->outputMan()->print(LOG_TIMING, t3_t0);
@@ -536,6 +540,7 @@ long RadioManager::calculateOffsetFromNTPResponseFromServer(RF24Message *ntpMess
 		singleMan->outputMan()->print(LOG_TIMING, F(" offset: "));
 		singleMan->outputMan()->println(LOG_TIMING, offset);
 	}
+#endif
 
 	// return
 	return(offset);

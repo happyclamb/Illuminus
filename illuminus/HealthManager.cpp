@@ -178,6 +178,8 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getZone());
 		singleMan->outputMan()->print(log_level, F("  this.address> "));
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getAddress());
+		singleMan->outputMan()->print(log_level, F("  interference> "));
+		singleMan->outputMan()->print(log_level, singleMan->radioMan()->checkForInterference());
 		singleMan->outputMan()->print(log_level, F("  freeMemory> "));
 		singleMan->outputMan()->println(log_level, freeMemory());
 

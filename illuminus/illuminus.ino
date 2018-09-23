@@ -31,10 +31,11 @@ void setup() {
 	// Start interrupt handler for LightManagement
 	init_TIMER1_irq();
 
-	singleMan->outputMan()->println(LOG_CLI, F("Setup complete"));
 	singleMan->outputMan()->println(LOG_INFO, F("Info Logging enabled"));
 	singleMan->outputMan()->println(LOG_DEBUG, F("Debug Logging enabled"));
+#ifdef LOG_TIMING_DEFINED
 	singleMan->outputMan()->println(LOG_TIMING, F("Timing Logging enabled"));
+#endif
 }
 
 // initialize timer1 to redraw the LED strip and BigLight
@@ -71,12 +72,13 @@ void init_TIMER1_irq()
 
 	// Finally load the timer start counter; lowest is where to count
 	// start as interrupt happens at wrap around
-    // 65535 == wrap;
-    // 1/64; 20ms == 20,000uS @ 4uS/tick == 5,000 tics == 65535 - 5000 == 60035		// smooth
-    // 1/64; 50ms == 50,000uS @ 4uS/tick == 12,500 tics == 65535 - 12500 == 53035		// smooth
-    // 1/64; 100ms == 100,000uS @ 4uS/tick == 25,000 tics == 65535 - 25000 == 40535 // jittery
+		// 65535 == wrap;
+		// 1/64;  20ms ==  20,000uS @ 4uS/tick ==  5,000 tics == 65535 - 5000  == 60035  // smooth
+		// 1/64;  35ms ==  35,000uS @ 4uS/tick ==  8,750 tics == 65535 - 8750  == 56785  // smooth
+		// 1/64;  50ms ==  50,000uS @ 4uS/tick == 12,500 tics == 65535 - 12500 == 53035  // smooth
+		// 1/64; 100ms == 100,000uS @ 4uS/tick == 25,000 tics == 65535 - 25000 == 40535  // jittery
 
-	timer1_counter = 53035;
+	timer1_counter = 56785;
 	TCNT1 = timer1_counter;
 
 	// enable all interrupts now that things are ready to go

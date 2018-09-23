@@ -22,7 +22,8 @@ class AddressManager
 		SingletonManager* singleMan = NULL;
 		bool addressSet = false;
 		byte address = 255;
-		byte newAddressRetries = 5;
+		byte newAddressRetries = 8;
+		unsigned long ADDRESS_REQUEST_TIMEOUT = 1439;
 
 		void sendAddressRequest();
 };
