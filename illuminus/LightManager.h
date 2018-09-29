@@ -56,12 +56,12 @@ class LightManager {
 		LightPattern* currPattern;
 		LightPattern* nextPattern;
 
-		byte number_patterns_defined = 5;
-		unsigned long pattern_duration = 59999; // closest prime to 1 min
+		byte number_patterns_defined = 9;
+		unsigned long pattern_duration = 90001; // closest prime to 90sec
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);
-		float cosFade(unsigned long currTime, byte brightnessSpeed);
+		float cosFade(byte brightnessSpeed, bool syncedBrightness);
 
 		void checkForPatternUpdate();
 		void initializingPattern(byte init_state);
@@ -69,9 +69,9 @@ class LightManager {
 
 		void bananaGuard();
 		void solidColor(byte wheelPos, byte brightness, byte sentyRequested);
-		void solidWheelColorChange(LightPatternTimingOptions timingType,
-			byte patternSpeed, byte brightnessSpeed, byte insideColors);
-		void walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground);
+		void solidWheelColorChange(LightPatternTimingOptions timingType, LightPatternInsideColor insideColors,
+			byte patternSpeed, byte brightnessSpeed, bool syncedBrightness);
+		void walkingLights(byte patternSpeed, byte brightnessSpeed, bool syncedBrightness, byte initialBackground);
 };
 
 #endif // __LIGHTMANAGER_H__

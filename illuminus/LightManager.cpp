@@ -75,16 +75,15 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 	if((this->manual_mode == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
-		// Prevent back to back of the same patterns
-		while(this->nextPattern->pattern == this->currPattern->pattern ||
-			(singleMan->healthMan()->totalSentries() < 5 && this->nextPattern->pattern == 5)) {
-			this->nextPattern->pattern = random(1, this->number_patterns_defined+1);
-		}
+		// Increment through all the patterns, on loop roll to 1 (as 0 is 'waiting' pattern)
+		this->nextPattern->pattern = this->currPattern->pattern + 1;
+		if(this->nextPattern->pattern > this->number_patterns_defined)
+			this->nextPattern->pattern = 1;
 
-		this->nextPattern->pattern_param1 = random(1, 4)*15;
-		this->nextPattern->pattern_param2 = random(0, 3)*4;
+		this->nextPattern->pattern_param1 = random(1, 4)*42;
+		this->nextPattern->pattern_param2 = random(0, 3)*21;
 		this->nextPattern->pattern_param3 = random(0, 4);
-		this->nextPattern->pattern_param4 = random(1, 4);
+		this->nextPattern->pattern_param4 = random(0, 4);
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
 			(nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration());
@@ -136,7 +135,13 @@ void LightManager::colorFromWheelPosition(byte wheelPos,
 }
 
 
-float LightManager::cosFade(unsigned long currTime, byte brightnessSpeed) {
+float LightManager::cosFade(byte brightnessSpeed, bool syncedBrightness) {
+	unsigned long currTime;
+	if(syncedBrightness)
+		currTime = singleMan->radioMan()->getAdjustedMillis();
+	else
+		currTime = millis();
+
 	float cosBright = 1.0;
 	if(brightnessSpeed > 0) {
 		/*		cos(rad)		Calculates the cos of an angle (in radians). The result will be between -1 and 1.
@@ -217,27 +222,45 @@ void LightManager::updateLEDArrayFromCurrentPattern()
 		case 0:
 			bananaGuard();
 			break;
+
 		case 1:
-			solidWheelColorChange(PATTERN_TIMING_SYNC, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3);
+			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_SOLID,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
 			break;
 		case 2:
-			solidWheelColorChange(PATTERN_TIMING_STAGGER, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3);
+			solidWheelColorChange(PATTERN_TIMING_STAGGER, INSIDE_SOLID,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
 			break;
 		case 3:
-			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3);
+			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_CANDY_CANE,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
 			break;
 		case 4:
-			solidWheelColorChange(PATTERN_TIMING_NONE, currPattern->pattern_param1,
-				currPattern->pattern_param2, currPattern->pattern_param3);
+			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_SOLID,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
 			break;
 		case 5:
-			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
-				75+(currPattern->pattern_param3*25));
+			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_RAINBOW,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
 			break;
-		case 10:
+		case 6:
+			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, INSIDE_SOLID,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+			break;
+		case 7:
+			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_HALF_HALF,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+			break;
+		case 8:
+			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_CANDY_CANE,
+				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+			break;
+		case 9:
+			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
+				currPattern->pattern_param3%2, 20+(currPattern->pattern_param4*10));
+			break;
+
+		case 20:
 			solidColor(currPattern->pattern_param1, currPattern->pattern_param2,
 				currPattern->pattern_param3);
 			break;
@@ -289,15 +312,20 @@ void LightManager::solidColor(byte wheelPos, byte brightness, byte sentyRequeste
 //	if (allLaternLEDs) then make all 6 LEDs the same
 // MATH: cycle through all 255 wheel positions over ~3sec
 // == 3000/255 == 11.7 ... make a step 12ms == 12*255 == 3060
-void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
-	byte patternSpeed, byte brightnessSpeed, byte insideColors) {
+void LightManager::solidWheelColorChange(
+	LightPatternTimingOptions timingType,
+	LightPatternInsideColor insideColors,
+	byte patternSpeed,
+	byte brightnessSpeed,
+	bool syncedBrightness)
+{
 	unsigned long currTime = 0;
 	if(timingType == PATTERN_TIMING_NONE)
 		currTime = millis();
 	else
 		currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	float brightnessFloat = this->cosFade(currTime, brightnessSpeed);
+	float brightnessFloat = this->cosFade(brightnessSpeed, syncedBrightness);
 	byte colorTimeBetweenSteps = patternSpeed;
 	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
@@ -313,15 +341,16 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 
 	byte baseWheel = wheelPos+thisSentryOffset;
 
-	byte numColours = 6;
-	if (insideColors == 0) numColours = 1;
-	else if (insideColors == 1 || insideColors == 2) numColours = 2;
+	byte numColours = 0;
+	if (insideColors == INSIDE_SOLID) numColours = 1;
+	else if (insideColors == INSIDE_CANDY_CANE || insideColors == INSIDE_HALF_HALF) numColours = 2;
+	else /* if (insideColors == INSIDE_RAINBOW) */ numColours = 6;
 	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / numColours;
 
 	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		byte LEDcolor = baseWheel;
 		if(numColours > 1) {
-			if (insideColors == 2)
+			if (insideColors == INSIDE_HALF_HALF)
 				LEDcolor += offsetForLanternLeds*(i/numColours);
 			else
 				LEDcolor += offsetForLanternLeds*(i%numColours);
@@ -333,11 +362,13 @@ void LightManager::solidWheelColorChange(LightPatternTimingOptions timingType,
 
 
 // Walk through all the sentries and for each lantern choose a color
-void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed, byte initialBackground) {
+void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed,
+	bool syncedBrightness, byte initialBackground)
+{
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	float brightnessFloat = this->cosFade(currTime, brightnessSpeed);
+	float brightnessFloat = this->cosFade(brightnessSpeed, syncedBrightness);
 
-	unsigned long colorTimeBetweenSteps = patternSpeed*5;
+	unsigned long colorTimeBetweenSteps = patternSpeed*3;
 	unsigned long totalSteps = singleMan->healthMan()->totalSentries();
 	byte currStep = (currTime%(totalSteps*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
