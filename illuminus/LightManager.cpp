@@ -106,6 +106,46 @@ CRGB LightManager::colorFromWheelPosition(byte wheelPos, float brightness)
 	return CRGB(r, g, b);
 }
 
+/*  Halloween version
+Green:
+	red:   25->110
+	green: 220 -> 155
+	blue:  0
+Orange:
+	red:   170->255
+	green: 85 -> 0
+	blue:  0
+Purple:
+	red:   155->70
+	green: 0
+	blue:  100->185
+void LightManager::colorFromWheelPosition(byte wheelPos,
+	byte *r, byte *g, byte *b, float brightness)
+{
+	if (wheelPos < 85) {
+		// 0-->85
+		*r = 25 + wheelPos;
+		*g = 220 - wheelPos;
+		*b = 0;
+	} else if (wheelPos < 170) {
+		// 85-->170
+		wheelPos -= 85;
+		*r = 170 + wheelPos;
+		*g = 85 - wheelPos;
+		*b = 0;
+	} else {
+		// 170-->255
+		wheelPos -= 170;
+		*r = 155 - wheelPos;
+		*g = 0;
+		*b = 100 + wheelPos;
+	}
+
+	*r = (brightness * (float)*r);
+	*g = (brightness * (float)*g);
+	*b = (brightness * (float)*b);
+}
+*/
 
 void LightManager::colorFromWheelPosition(byte wheelPos,
 	byte *r, byte *g, byte *b, float brightness)
