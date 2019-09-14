@@ -120,6 +120,14 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 			this->nextPattern->pattern = 0;
 		}
 
+		// Such Randoms
+		if (singleMan->inputMan()->isButtonPressed(4)) {
+			byte currPattern = this->nextPattern->pattern;
+			while (currPattern == this->nextPattern->pattern) {
+				this->nextPattern->pattern = random(0, this->number_patterns_defined);
+			}
+		}
+
 		// Pattern Speed
 		this->nextPattern->pattern_param1 = map(singleMan->inputMan()->getAnalog(0), 0, 255, 200, 20);
 
@@ -138,9 +146,6 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 
 		// Brightness Scale
 		this->nextPattern->pattern_param4 = singleMan->inputMan()->getAnalog(2);
-
-		// for each value we need to read inputs to mark them as handled; maybe make them do something ?
-		singleMan->inputMan()->isButtonPressed(4);
 
 		singleMan->outputMan()->print(LOG_DEBUG, F("NewPattern >"));
 		this->nextPattern->printlnPattern(singleMan, LOG_DEBUG);
@@ -351,6 +356,7 @@ void LightManager::updateLEDArrayFromCurrentPattern() {
 			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_CANDY_CANE,
 				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
+
 		case 9:
 			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
 				currPattern->pattern_param3%2, initBrightness, 20+(currPattern->pattern_param5*10));

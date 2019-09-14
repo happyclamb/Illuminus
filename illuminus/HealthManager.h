@@ -43,13 +43,13 @@ class HealthManager
 
 		void checkAllSentryHealth();
 		void printHealth(OUTPUT_LOG_TYPES log_level);
-		unsigned long getDeathOffset() { return deathOffset; }
+		unsigned long getDeathOffset() { return DEATH_OFFSET; }
 
 	private:
 		SingletonManager* singleMan = NULL;
 		SentryHealthNode* healthQueue = NULL;
 		byte sentryCount = 0;
-		unsigned long deathOffset = 180000; // 3 min
+		unsigned long DEATH_OFFSET = 180000; // 3 min
 
 		void pruneEndSentries();
 		void updateSentryInfo(byte id, unsigned long ntpRequestTime, unsigned long messageTime, byte lightLevel);

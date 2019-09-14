@@ -244,7 +244,6 @@ void serverLoop() {
 		lightMessage->param7_server_start = nextPattern->startTime;
 
 		singleMan->radioMan()->sendMessage(lightMessage);
-		nextPattern->printlnPattern(singleMan, LOG_RADIO);
 	}
 }
 

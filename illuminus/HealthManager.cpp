@@ -118,7 +118,7 @@ void HealthManager::checkAllSentryHealth() {
 
 		unsigned long currTime = millis();
 		unsigned long lastRequest = currNode->health->last_message;
-		unsigned long deadTime = lastRequest + this->deathOffset;
+		unsigned long deadTime = lastRequest + this->getDeathOffset();
 
 		if(currTime > deadTime && currNode->health->isAlive == true) {
 			currNode->health->isAlive = false;

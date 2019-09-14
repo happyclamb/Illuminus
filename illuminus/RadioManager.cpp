@@ -217,8 +217,19 @@ void RadioManager::printlnMessage(OUTPUT_LOG_TYPES log_level, RF24Message messag
 			singleMan->outputMan()->print(LOG_DEBUG, message.sentryTargetID);
 			singleMan->outputMan()->print(LOG_DEBUG, F(" p1> "));
 			singleMan->outputMan()->print(LOG_DEBUG, message.param1_byte);
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p2> "));
+			singleMan->outputMan()->print(LOG_DEBUG, message.param2_byte);
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p3> "));
+			singleMan->outputMan()->print(LOG_DEBUG, message.param3_byte);
+
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p4> "));
+			singleMan->outputMan()->print(LOG_DEBUG, message.param4_client_end);
 			singleMan->outputMan()->print(LOG_DEBUG, F(" p5> "));
-			singleMan->outputMan()->println(LOG_DEBUG, message.param5_client_start);
+			singleMan->outputMan()->print(LOG_DEBUG, message.param5_client_start);
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p6> "));
+			singleMan->outputMan()->print(LOG_DEBUG, message.param6_server_end);
+			singleMan->outputMan()->print(LOG_DEBUG, F(" p7> "));
+			singleMan->outputMan()->println(LOG_DEBUG, message.param7_server_start);
 		} else {
 			singleMan->outputMan()->println(log_level, message.messageType);
 		}

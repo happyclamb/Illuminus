@@ -36,14 +36,18 @@ InputManager::InputManager(SingletonManager* _singleMan) :
 
 bool InputManager::hasUnhandledInput() {
 	bool returnVal = false;
-	for(byte i=0; i<5; i++) {
-		if (this->button_handled[i] == false)
-			returnVal = true;
+
+	if(this->isInteractiveMode()) {
+		for(byte i=0; i<5; i++) {
+			if (this->button_handled[i] == false)
+				returnVal = true;
+		}
+		for(byte i=0; i<3; i++) {
+			if (this->analog_handled[i] == false)
+				returnVal = true;
+		}
 	}
-	for(byte i=0; i<3; i++) {
-		if (this->analog_handled[i] == false)
-			returnVal = true;
-	}
+
 	return returnVal;
 }
 
@@ -66,7 +70,7 @@ void InputManager::updateValues() {
 	}
 
 	// If the interactive_mode is more than duration, empty it
-	if(millis() > this->interactive_mode + INTERACTIVE_MODE_DURATION) {
+	if(this->isInteractiveMode() && millis() > this->interactive_mode + INTERACTIVE_MODE_DURATION) {
 		this->setInteractiveMode(false);
 	}
 
