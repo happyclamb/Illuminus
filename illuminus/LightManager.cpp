@@ -72,7 +72,7 @@ void LightManager::setNextPattern(LightPattern* newPattern, OUTPUT_LOG_TYPES log
 void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/) {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	if((this->manual_mode == false) &&
+	if((singleMan->inputMan()->isInteractiveMode() == false) &&
 		(this->currPattern->startTime >= this->nextPattern->startTime))
 	{
 		// Increment through all the patterns, on loop roll to 1 (as 0 is 'waiting' pattern)
@@ -83,12 +83,66 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		this->nextPattern->pattern_param1 = random(1, 4)*42;
 		this->nextPattern->pattern_param2 = random(0, 3)*21;
 		this->nextPattern->pattern_param3 = random(0, 4);
-		this->nextPattern->pattern_param4 = random(0, 4);
+		this->nextPattern->pattern_param4 = 255;
 		this->nextPattern->pattern_param5 = random(1, 4);
 		this->nextPattern->startTime = currTime +
 			(nextPatternTimeOffset > 0 ? nextPatternTimeOffset : this->getPatternDuration());
 
-		singleMan->outputMan()->print(LOG_DEBUG, F("ChooseNewPattern >"));
+		singleMan->outputMan()->print(LOG_DEBUG, F("NewPattern >"));
+		this->nextPattern->printlnPattern(singleMan, LOG_DEBUG);
+	} else if(singleMan->inputMan()->isInteractiveMode() == true &&
+		singleMan->inputMan()->hasUnhandledInput()) {
+
+		// next pattern is based on existing pattern
+		this->nextPattern->update(this->currPattern);
+
+		// startTime is as soon as possible
+		this->nextPattern->startTime = currTime;
+
+		// Allow forward
+		bool button_1_pressed = singleMan->inputMan()->isButtonPressed(1);
+		if (button_1_pressed) {
+			this->nextPattern->pattern = this->nextPattern->pattern + (button_1_pressed ? 1 : 0);
+			if(this->nextPattern->pattern >= this->number_patterns_defined)
+				this->nextPattern->pattern = 1;
+		}
+
+		// And backwards
+		bool button_0_pressed = singleMan->inputMan()->isButtonPressed(0);
+		if (button_0_pressed) {
+			this->nextPattern->pattern = this->nextPattern->pattern - (button_0_pressed ? 1 : 0);
+			if(this->nextPattern->pattern == 0 || this->nextPattern->pattern >= this->number_patterns_defined)
+				this->nextPattern->pattern = this->number_patterns_defined - 1;
+		}
+
+		// Bananananna Guard
+		if (singleMan->inputMan()->isButtonPressed(3)) {
+			this->nextPattern->pattern = 0;
+		}
+
+		// Pattern Speed
+		this->nextPattern->pattern_param1 = map(singleMan->inputMan()->getAnalog(0), 0, 255, 200, 20);
+
+		// BrightnessFade speed
+		this->nextPattern->pattern_param2 = singleMan->inputMan()->getAnalog(1);
+		if (this->nextPattern->pattern_param2 > 0) {
+			// Need to reverse the values except if it's zero as that means stop
+			this->nextPattern->pattern_param2 = map(this->nextPattern->pattern_param2, 1, 255, 70, 1);
+		}
+
+		// And sync brightness
+		bool button_2_pressed = singleMan->inputMan()->isButtonPressed(2);
+		this->nextPattern->pattern_param3 = this->nextPattern->pattern_param3 + (button_2_pressed ? 1 : 0);
+		if(this->nextPattern->pattern_param3 == 4)
+			this->nextPattern->pattern_param3 = 0;
+
+		// Brightness Scale
+		this->nextPattern->pattern_param4 = singleMan->inputMan()->getAnalog(2);
+
+		// for each value we need to read inputs to mark them as handled; maybe make them do something ?
+		singleMan->inputMan()->isButtonPressed(4);
+
+		singleMan->outputMan()->print(LOG_DEBUG, F("NewPattern >"));
 		this->nextPattern->printlnPattern(singleMan, LOG_DEBUG);
 	}
 }
@@ -175,7 +229,7 @@ void LightManager::colorFromWheelPosition(byte wheelPos,
 }
 
 
-float LightManager::cosFade(byte brightnessSpeed, bool syncedBrightness) {
+float LightManager::cosFade(float scaledBrightness, byte brightnessSpeed, bool syncedBrightness) {
 	unsigned long currTime;
 	if(syncedBrightness)
 		currTime = singleMan->radioMan()->getAdjustedMillis();
@@ -201,7 +255,7 @@ float LightManager::cosFade(byte brightnessSpeed, bool syncedBrightness) {
 		cosBright = cosBright/2.5 + 0.20;
 	}
 
-	return cosBright;
+	return cosBright*scaledBrightness;
 }
 
 
@@ -256,59 +310,61 @@ void LightManager::checkForPatternUpdate() {
 }
 
 
-void LightManager::updateLEDArrayFromCurrentPattern()
-{
+void LightManager::updateLEDArrayFromCurrentPattern() {
+
+	float initBrightness = ((float)map(currPattern->pattern_param4, 0, 255, 200, 1000)) / 1000;
+
 	switch(this->currPattern->pattern) {
 		case 0:
-			bananaGuard();
+			bananaGuard(initBrightness);
 			break;
 
 		case 1:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_SOLID,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 2:
 			solidWheelColorChange(PATTERN_TIMING_STAGGER, INSIDE_SOLID,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 3:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_CANDY_CANE,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 4:
 			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_SOLID,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 5:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_RAINBOW,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 6:
 			solidWheelColorChange(PATTERN_TIMING_ALTERNATE, INSIDE_SOLID,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 7:
 			solidWheelColorChange(PATTERN_TIMING_SYNC, INSIDE_HALF_HALF,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 8:
 			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_CANDY_CANE,
-				currPattern->pattern_param1, currPattern->pattern_param2, currPattern->pattern_param3%2);
+				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
 		case 9:
 			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
-				currPattern->pattern_param3%2, 20+(currPattern->pattern_param4*10));
+				currPattern->pattern_param3%2, initBrightness, 20+(currPattern->pattern_param5*10));
 			break;
 
 		case 20:
 			solidColor(currPattern->pattern_param1, currPattern->pattern_param2,
-				currPattern->pattern_param3);
+				currPattern->pattern_param3, initBrightness);
 			break;
 	}
 }
 
 
-void LightManager::bananaGuard() {
+void LightManager::bananaGuard(float brightness /*=0.8*/) {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 
 	// Over 2000ms break into 200ms sections (10 total) segments
@@ -319,9 +375,9 @@ void LightManager::bananaGuard() {
 
 	CRGB paramColor;
 	switch(colorIndex) {
-		case 0: paramColor = CRGB(100,  0,  0); break;
-		case 1: paramColor = CRGB(  0,100,  0); break;
-		case 2: paramColor = CRGB(  0,  0,100); break;
+		case 0: paramColor = CRGB((float)255*brightness, 0, 0); break;
+		case 1: paramColor = CRGB(0, (float)255*brightness, 0); break;
+		case 2: paramColor = CRGB(0, 0, (float)255*brightness); break;
 	}
 
 	for(byte i=0; i<NUM_RGB_LEDS; i++) {
@@ -333,7 +389,7 @@ void LightManager::bananaGuard() {
 }
 
 
-void LightManager::solidColor(byte wheelPos, byte brightness, byte sentyRequested) {
+void LightManager::solidColor(byte wheelPos, byte brightness, byte sentyRequested, float initialBrightness) {
 	float float_brightness = ((float)map(brightness, 0, 255, 0, 100))/100;
 
 	CRGB newColor = CRGB(0,0,0);
@@ -357,6 +413,7 @@ void LightManager::solidWheelColorChange(
 	LightPatternInsideColor insideColors,
 	byte patternSpeed,
 	byte brightnessSpeed,
+	float initialBrightness,
 	bool syncedBrightness)
 {
 	unsigned long currTime = 0;
@@ -365,7 +422,7 @@ void LightManager::solidWheelColorChange(
 	else
 		currTime = singleMan->radioMan()->getAdjustedMillis();
 
-	float brightnessFloat = this->cosFade(brightnessSpeed, syncedBrightness);
+	float brightnessFloat = this->cosFade(initialBrightness, brightnessSpeed, syncedBrightness);
 	byte colorTimeBetweenSteps = patternSpeed;
 	byte wheelPos = (currTime%(COLOR_STEPS_IN_WHEEL*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
@@ -385,13 +442,13 @@ void LightManager::solidWheelColorChange(
 	if (insideColors == INSIDE_SOLID) numColours = 1;
 	else if (insideColors == INSIDE_CANDY_CANE || insideColors == INSIDE_HALF_HALF) numColours = 2;
 	else /* if (insideColors == INSIDE_RAINBOW) */ numColours = 6;
-	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / numColours;
 
+	byte offsetForLanternLeds = COLOR_STEPS_IN_WHEEL / numColours;
 	for(byte i=0; i<NUM_RGB_LEDS; i++) {
 		byte LEDcolor = baseWheel;
 		if(numColours > 1) {
 			if (insideColors == INSIDE_HALF_HALF)
-				LEDcolor += offsetForLanternLeds*(i/numColours);
+				LEDcolor += offsetForLanternLeds*(i/(NUM_RGB_LEDS/numColours));
 			else
 				LEDcolor += offsetForLanternLeds*(i%numColours);
 		}
@@ -403,10 +460,10 @@ void LightManager::solidWheelColorChange(
 
 // Walk through all the sentries and for each lantern choose a color
 void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed,
-	bool syncedBrightness, byte initialBackground)
+	bool syncedBrightness, float initialBrightness, byte initialBackground)
 {
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
-	float brightnessFloat = this->cosFade(brightnessSpeed, syncedBrightness);
+	float brightnessFloat = this->cosFade(initialBrightness, brightnessSpeed, syncedBrightness);
 
 	unsigned long colorTimeBetweenSteps = patternSpeed*3;
 	unsigned long totalSteps = singleMan->healthMan()->totalSentries();

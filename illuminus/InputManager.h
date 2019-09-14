@@ -11,32 +11,39 @@ class InputManager
 	public:
 		InputManager(SingletonManager* _singleMan);
 
+		bool isInteractiveMode() { return this->interactive_mode > 0; }
+		void setInteractiveMode(bool newMode) { this->interactive_mode = newMode ? millis() : 0; }
+
 		void showOptions();
 		void updateValues();
 
-		bool isButton1Pressed() { return this->button1_pressed; }
-		bool isButton2Pressed() { return this->button2_pressed; }
-		bool isMotionDetected() { return this->motionLevel_avg > 64; }
-		byte getLightLevel()    { return this->lightLevel_avg; }
-		byte getSoundLevel()    { return this->soundLevel_avg; }
-		byte getZoneInput()     { return this->zoneInput; }
+		byte getZoneInput() { return this->zoneInput; }
+
+		bool hasUnhandledInput();
+		bool isButtonPressed(byte index);
+		byte getAnalog(byte index);
 
 	private:
 		SingletonManager* singleMan = NULL;
 
-		int READ_FREQUENCY = 251;
+		unsigned long interactive_mode = 0;
+
+		unsigned long INTERACTIVE_MODE_DURATION = 120000; // 2minutes; 2*60*1000
+		unsigned long OUTPUT_FREQUENCY = 1000;
+		unsigned long BUTTON_READ_INTERVAL = 750;
+		unsigned long POT_READ_INTERVAL = 200;
+		unsigned long POT_READ_SENSITIVITY = 2;
 
 		byte zoneInput = 0;
-		bool button1_pressed = false;
-		bool button2_pressed = false;
 
-		byte inputIndex = 0;
-		byte motionLevel[5];
-		byte lightLevel[5];
-		byte soundLevel[5];
-		byte motionLevel_avg = 0;
-		byte lightLevel_avg = 0;
-		byte soundLevel_avg = 0;
+		int button_pins[5];
+		unsigned long button_last_pressed[5];
+		bool button_pressed[5];
+		bool button_handled[5];
+
+		int analog_pins[3];
+		byte analog_level[3];
+		bool analog_handled[3];
 
 		void processData(const char * data);
 		void processIncomingByte(const byte inByte);

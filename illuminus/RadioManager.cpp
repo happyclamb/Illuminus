@@ -14,7 +14,7 @@ RadioManager::RadioManager(SingletonManager* _singleMan):
 	messageSendStack = new MessageStack();
 
 	// Use some vaguely random read to seed the lanterns
-	randomSeed(analogRead(LIGHT_SENSOR_A1_PIN));
+	randomSeed(analogRead(INPUT_A3_PIN));
 
 	// init the sentUIDs array
 	for(byte i=0; i<MAX_STORED_MSG_IDS; i++)

@@ -4,18 +4,29 @@
 InputManager::InputManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
 {
-	// Setup the digital pins
-	pinMode(INPUT1_PIN, INPUT_PULLUP);
-	pinMode(INPUT2_PIN, INPUT_PULLUP);
-
 	// Setup the zone pins
 	pinMode(ZONE_0_PIN, INPUT_PULLUP);
 	pinMode(ZONE_1_PIN, INPUT_PULLUP);
 
+	// Setup the digital inputs
+	this->button_pins[0] = INPUT1_PIN;   pinMode(this->button_pins[0], INPUT_PULLUP);
+	this->button_pins[1] = INPUT2_PIN;   pinMode(this->button_pins[1], INPUT_PULLUP);
+	this->button_pins[2] = INPUT_A5_PIN; pinMode(this->button_pins[2], INPUT_PULLUP);
+	this->button_pins[3] = INPUT_A4_PIN; pinMode(this->button_pins[3], INPUT_PULLUP);
+	this->button_pins[4] = INPUT_A1_PIN; pinMode(this->button_pins[4], INPUT);
 	for(byte i=0; i<5; i++) {
-		this->motionLevel[i] = 0;
-		this->lightLevel[i] = 0;
-		this->soundLevel[i] = 0;
+		this->button_last_pressed[i] = 0;
+		this->button_pressed[i] = false;
+		this->button_handled[i] = true;
+	}
+
+	// Setup the analog inputs
+	this->analog_pins[0] = INPUT_A0_PIN;
+	this->analog_pins[1] = INPUT_A2_PIN;
+	this->analog_pins[2] = INPUT_A3_PIN;
+	for(byte i=0; i<3; i++) {
+		this->analog_level[i] = map(analogRead(this->analog_pins[i]), 0, 1023, 0, 255);
+		this->analog_handled[i] = true;
 	}
 
 	updateValues();
@@ -23,6 +34,29 @@ InputManager::InputManager(SingletonManager* _singleMan) :
 	singleMan->setInputMan(this);
 }
 
+bool InputManager::hasUnhandledInput() {
+	bool returnVal = false;
+	for(byte i=0; i<5; i++) {
+		if (this->button_handled[i] == false)
+			returnVal = true;
+	}
+	for(byte i=0; i<3; i++) {
+		if (this->analog_handled[i] == false)
+			returnVal = true;
+	}
+	return returnVal;
+}
+
+bool InputManager::isButtonPressed(byte index) {
+	bool returnVal = this->button_pressed[index] == true && this->button_handled[index] == false;
+	this->button_handled[index] = true;
+	return returnVal;
+}
+
+byte InputManager::getAnalog(byte index) {
+	this->analog_handled[index] = true;
+	return this->analog_level[index];
+}
 
 void InputManager::updateValues() {
 
@@ -31,45 +65,76 @@ void InputManager::updateValues() {
 		processIncomingByte(Serial.read());
 	}
 
-	// Poll the zone pins :: HIGH == off, LOW == on
+	// If the interactive_mode is more than duration, empty it
+	if(millis() > this->interactive_mode + INTERACTIVE_MODE_DURATION) {
+		this->setInteractiveMode(false);
+	}
+
 	zoneInput = 0;
 	if(digitalRead(ZONE_0_PIN) == LOW)
 		zoneInput += 1;
 	if(digitalRead(ZONE_1_PIN) == LOW)
 		zoneInput += 2;
 
-	// HIGH == off, LOW == on
-	button1_pressed = false;
-	if(digitalRead(INPUT1_PIN) == LOW)
-		button1_pressed = true;
-
-	button2_pressed = false;
-	if(digitalRead(INPUT2_PIN) == LOW)
-		button2_pressed = true;
+	// Poll all the buttons and get them ready for servicing
+	for(byte i=0; i<5; i++) {
+		if(this->button_last_pressed[i] > 0 && (millis() > this->button_last_pressed[i] + BUTTON_READ_INTERVAL)) {
+			this->button_pressed[i] = false;
+			this->button_handled[i] = true;
+			this->button_last_pressed[i] = 0;
+		}
+		// button_pin[4] is wired inverse to the other buttons
+		if(this->button_last_pressed[i] == 0 && digitalRead(this->button_pins[i]) == (i != 4 ? LOW : HIGH)) {
+			this->setInteractiveMode(true);
+			this->button_pressed[i] = true;
+			this->button_handled[i] = false;
+			this->button_last_pressed[i] = millis();
+		}
+	}
 
 	// Analog inputs (value 0->1023)
 	static unsigned long nextRead = 0;
 	if(millis() > nextRead) {
-		nextRead = millis() + READ_FREQUENCY;
+		nextRead = millis() + POT_READ_INTERVAL;
+		for(byte i=0; i<3; i++) {
+			byte new_level = map(analogRead(this->analog_pins[i]), 0, 1023, 0, 255);
 
-		lightLevel[inputIndex]  = map(analogRead(LIGHT_SENSOR_A1_PIN), 0, 1023, 0, 255);
-		soundLevel[inputIndex]  = map(analogRead(SOUND_SENSOR_A2_PIN), 0, 1023, 0, 255);
-		motionLevel[inputIndex] = map(analogRead(MOTION_SENSOR_A3_PIN), 0, 1023, 0, 255);
-
-		int motionLevel_sum = 0;
-		int lightLevel_sum = 0;
-		int soundLevel_sum = 0;
-		for(byte i=0; i<5; i++) {
-			motionLevel_sum += this->motionLevel[i];
-			lightLevel_sum  += this->lightLevel[i];
-			soundLevel_sum  += this->soundLevel[i];
+			if (new_level >= this->analog_level[i] + POT_READ_SENSITIVITY
+				|| new_level + POT_READ_SENSITIVITY <= this->analog_level[i])
+			{
+				this->setInteractiveMode(true);
+				this->analog_level[i] = new_level;
+				this->analog_handled[i] = false;
+			}
 		}
-		this->motionLevel_avg = motionLevel_sum / 5;
-		this->lightLevel_avg = lightLevel_sum / 5;
-		this->soundLevel_avg = soundLevel_sum / 5;
+	}
 
-		// Advance to next index
-		if(++inputIndex == 5) inputIndex = 0;
+	// Handle output of logging inputs
+	static unsigned long nextOutput = 0;
+	if(millis() > nextOutput) {
+		nextOutput = millis() + OUTPUT_FREQUENCY;
+
+		singleMan->outputMan()->print(LOG_INPUTS, F("i:"));
+		singleMan->outputMan()->print(LOG_INPUTS, isInteractiveMode());
+
+		singleMan->outputMan()->print(LOG_INPUTS, F(" ui:"));
+		singleMan->outputMan()->print(LOG_INPUTS, hasUnhandledInput());
+
+		for(byte i=0; i<5; i++) {
+			singleMan->outputMan()->print(LOG_INPUTS, F(" d"));
+			singleMan->outputMan()->print(LOG_INPUTS, i);
+			singleMan->outputMan()->print(LOG_INPUTS, F(":"));
+			singleMan->outputMan()->print(LOG_INPUTS, this->button_pressed[i]);
+		}
+
+		for(byte i=0; i<3; i++) {
+			singleMan->outputMan()->print(LOG_INPUTS, F(" a"));
+			singleMan->outputMan()->print(LOG_INPUTS, i);
+			singleMan->outputMan()->print(LOG_INPUTS, F(":"));
+			singleMan->outputMan()->print(LOG_INPUTS, this->analog_level[i]);
+		}
+
+		singleMan->outputMan()->println(LOG_INPUTS, F(""));
 	}
 }
 
@@ -106,7 +171,7 @@ void InputManager::showOptions() {
 	Serial.println(F("Options::"));
 	Serial.println(F("b #    update brightness of big LED"));
 	Serial.println(F("l      show current log levels"));
-	Serial.println(F("l #    toggle log level [info|debug|timing]"));
+	Serial.println(F("l #    toggle log level [info|debug|timing|inputs]"));
 	Serial.println(F("h      Health of lanterns in network"));
 	Serial.println(F("i      Interactive mode"));
 	Serial.println(F("a      Auto choose patterns"));
@@ -145,6 +210,8 @@ void InputManager::showLogLevels() {
 	singleMan->outputMan()->isLogLevelEnabled(LOG_DEBUG) ? Serial.println(F("on")) : Serial.println(F("off"));
 	Serial.print(F("   radio:  "));
 	singleMan->outputMan()->isLogLevelEnabled(LOG_RADIO) ? Serial.println(F("on")) : Serial.println(F("off"));
+	Serial.print(F("   inputs:  "));
+	singleMan->outputMan()->isLogLevelEnabled(LOG_INPUTS) ? Serial.println(F("on")) : Serial.println(F("off"));
 #ifdef LOG_TIMING_DEFINED
 	Serial.print(F("   timing: "));
 	singleMan->outputMan()->isLogLevelEnabled(LOG_TIMING) ? Serial.println(F("on")) : Serial.println(F("off"));
@@ -163,6 +230,8 @@ void InputManager::setLogLevel(const char * data){
 	else if (strcmp(data, "timing") == 0 || strcmp(data, "t") == 0)
 		log_level = LOG_TIMING;
 #endif
+	else if (strcmp(data, "inputs") == 0)
+		log_level = LOG_INPUTS;
 
 	if(log_level != LOG_CLI) {
 		singleMan->outputMan()->setLogLevel(log_level, !singleMan->outputMan()->isLogLevelEnabled(log_level));
@@ -201,18 +270,18 @@ void InputManager::processData(const char * data) {
 	if (singleMan->healthMan()->getServerAddress() == singleMan->addrMan()->getAddress()) {
 		switch (data[0]) {
 			case 'i': {
-				singleMan->lightMan()->setManualMode(true);
+				this->setInteractiveMode(true);
 				Serial.println(F("Interactive mode set"));
 				return;
 			}
 			case 'a': {
+				this->setInteractiveMode(false);
 				singleMan->lightMan()->chooseNewPattern(10);
-				singleMan->lightMan()->setManualMode(false);
 				Serial.println(F("Auto mode set"));
 				return;
 			}
 			case 'p': {
-				if(singleMan->lightMan()->getManualMode()) {
+				if(this->isInteractiveMode()) {
 					this->setPattern(&data[2]);
 				} else {
 					Serial.println(F("ERROR! Can only set pattern in interactive mode"));

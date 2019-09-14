@@ -119,7 +119,7 @@ void loop() {
 
 		// always update the local health
 		singleMan->healthMan()->updateSentryNTPRequestTime(singleMan->addrMan()->getAddress(), millis());
-		singleMan->healthMan()->updateSentryLightLevel(singleMan->addrMan()->getAddress(), singleMan->inputMan()->getLightLevel());
+		singleMan->healthMan()->updateSentryLightLevel(singleMan->addrMan()->getAddress(), 255);
 
 		singleMan->healthMan()->checkAllSentryHealth();
 		lastHealthCheck = millis();
@@ -218,11 +218,13 @@ void serverLoop() {
 		}
 	}
 
-	// Send the Color Message
-	if(millis() > nextColorMessage) {
+	// Send the Color Message if it's time to update the nextColorMessage
+	// OR if there is a button being pressed that'll change the pattern
+	if(millis() > nextColorMessage || singleMan->inputMan()->hasUnhandledInput()) {
 		nextColorMessage = millis() + singleMan->radioMan()->getIntervalColorMessages();
 
 		// generate newPatterns for LEDs since the interrupt will do the painting
+		// this will use the inputManager to determine the new pattern
 		singleMan->lightMan()->chooseNewPattern();
 
 		// This is a pointer to the original, don't delete it.
@@ -339,7 +341,7 @@ void sentryLoop() {
 		responseMessage->messageType = KEEP_ALIVE_FROM_SENTRY;
 		responseMessage->sentryTargetID = 0;
 		responseMessage->sentrySrcID = singleMan->addrMan()->getAddress();
-		responseMessage->param1_byte = singleMan->inputMan()->getLightLevel();
+		responseMessage->param1_byte = singleMan->inputMan()->getAnalog(0);
 		responseMessage->param4_client_end = currMessage->UID;
 		responseMessage->param5_client_start = currMessage->UID;
 		responseMessage->param6_server_end = currMessage->UID;

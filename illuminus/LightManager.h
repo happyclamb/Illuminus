@@ -34,9 +34,6 @@ class LightManager {
 	public:
 		LightManager(SingletonManager* _singleMan);
 
-		bool getManualMode() { return this->manual_mode; }
-		void setManualMode(bool newMode) { this->manual_mode = newMode; }
-
 		unsigned long getPatternDuration() { return this->pattern_duration; }
 		void setPatternDuration(unsigned long newDuration) { this->pattern_duration = newDuration; }
 
@@ -52,7 +49,6 @@ class LightManager {
 	private:
 		CRGB ledstrip[NUM_RGB_LEDS];
 		SingletonManager* singleMan = NULL;
-		bool manual_mode = false;
 		LightPattern* currPattern;
 		LightPattern* nextPattern;
 
@@ -61,17 +57,17 @@ class LightManager {
 
 		CRGB colorFromWheelPosition(byte wheelPos, float brightness=1.0);
 		void colorFromWheelPosition(byte wheelPos, byte *r, byte *g, byte *b, float brightness=1.0);
-		float cosFade(byte brightnessSpeed, bool syncedBrightness);
+		float cosFade(float scaledBrightness, byte brightnessSpeed, bool syncedBrightness);
 
 		void checkForPatternUpdate();
 		void initializingPattern(byte init_state);
 		void updateLEDArrayFromCurrentPattern();
 
-		void bananaGuard();
-		void solidColor(byte wheelPos, byte brightness, byte sentyRequested);
+		void bananaGuard(float brightness=0.8);
+		void solidColor(byte wheelPos, byte brightness, byte sentyRequested, float initialBrightness);
 		void solidWheelColorChange(LightPatternTimingOptions timingType, LightPatternInsideColor insideColors,
-			byte patternSpeed, byte brightnessSpeed, bool syncedBrightness);
-		void walkingLights(byte patternSpeed, byte brightnessSpeed, bool syncedBrightness, byte initialBackground);
+			byte patternSpeed, byte brightnessSpeed, float initialBrightness, bool syncedBrightness);
+		void walkingLights(byte patternSpeed, byte brightnessSpeed, bool syncedBrightness, float initialBrightness, byte initialBackground);
 };
 
 #endif // __LIGHTMANAGER_H__
