@@ -103,7 +103,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		bool button_1_pressed = singleMan->inputMan()->isButtonPressed(1);
 		if (button_1_pressed) {
 			this->nextPattern->pattern = this->nextPattern->pattern + (button_1_pressed ? 1 : 0);
-			if(this->nextPattern->pattern >= this->number_patterns_defined)
+			if(this->nextPattern->pattern > this->number_patterns_defined)
 				this->nextPattern->pattern = 1;
 		}
 
@@ -111,8 +111,8 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		bool button_0_pressed = singleMan->inputMan()->isButtonPressed(0);
 		if (button_0_pressed) {
 			this->nextPattern->pattern = this->nextPattern->pattern - (button_0_pressed ? 1 : 0);
-			if(this->nextPattern->pattern == 0 || this->nextPattern->pattern >= this->number_patterns_defined)
-				this->nextPattern->pattern = this->number_patterns_defined - 1;
+			if(this->nextPattern->pattern == 0 || this->nextPattern->pattern > this->number_patterns_defined)
+				this->nextPattern->pattern = this->number_patterns_defined;
 		}
 
 		// Bananananna Guard
@@ -124,7 +124,7 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 		if (singleMan->inputMan()->isButtonPressed(4)) {
 			byte currPattern = this->nextPattern->pattern;
 			while (currPattern == this->nextPattern->pattern) {
-				this->nextPattern->pattern = random(0, this->number_patterns_defined);
+				this->nextPattern->pattern = random(0, this->number_patterns_defined+1);
 			}
 		}
 
@@ -146,6 +146,9 @@ void LightManager::chooseNewPattern(unsigned long nextPatternTimeOffset /*= 0*/)
 
 		// Brightness Scale
 		this->nextPattern->pattern_param4 = singleMan->inputMan()->getAnalog(2);
+
+		// This is only used by pattern 9 - just leave as random for now
+		this->nextPattern->pattern_param5 = random(1, 4);
 
 		singleMan->outputMan()->print(LOG_DEBUG, F("NewPattern >"));
 		this->nextPattern->printlnPattern(singleMan, LOG_DEBUG);
@@ -356,7 +359,6 @@ void LightManager::updateLEDArrayFromCurrentPattern() {
 			solidWheelColorChange(PATTERN_TIMING_NONE, INSIDE_CANDY_CANE,
 				currPattern->pattern_param1, currPattern->pattern_param2, initBrightness, currPattern->pattern_param3%2);
 			break;
-
 		case 9:
 			walkingLights(currPattern->pattern_param1, currPattern->pattern_param2,
 				currPattern->pattern_param3%2, initBrightness, 20+(currPattern->pattern_param5*10));
@@ -471,7 +473,7 @@ void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed,
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	float brightnessFloat = this->cosFade(initialBrightness, brightnessSpeed, syncedBrightness);
 
-	unsigned long colorTimeBetweenSteps = patternSpeed*3;
+	unsigned long colorTimeBetweenSteps = patternSpeed*10;
 	unsigned long totalSteps = singleMan->healthMan()->totalSentries();
 	byte currStep = (currTime%(totalSteps*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 

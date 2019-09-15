@@ -285,10 +285,10 @@ void RadioManager::transmitStack(bool limited_transmit) {
 				// If in limited transmit mode only allow NEW_ADDRESS_REQUEST requests
 				//	or ones sent by this lantern.
 				//	Still delete other messages to prevent stack from overflowing
-				if(limited_transmit == false || limited_transmit && (
+				if(limited_transmit == false || (limited_transmit && (
 						messageToSend->messageType == NEW_ADDRESS_REQUEST ||
 						messageToSend->sentrySrcID == address
-					))
+					)))
 				{
 					singleMan->outputMan()->print(LOG_RADIO, millis());
 					singleMan->outputMan()->print(LOG_RADIO, F("  Radio Send    "));

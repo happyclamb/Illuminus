@@ -37,6 +37,7 @@ class HealthManager
 		byte totalSentries() { return this->sentryCount; }
 		byte nextAvailSentryID();
 		byte getOldestNTPRequest();
+		bool anyNonSyncedSentries();
 		SentryHealth* findSentry(byte id);
 
 		byte getServerAddress();

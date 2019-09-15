@@ -115,7 +115,7 @@ void loop() {
 
 	// Every IntervalBetweenNTPChecks, check the health of the sentries
 	static unsigned long lastHealthCheck = 0;
-	if(millis() > (lastHealthCheck + singleMan->radioMan()->getIntervalNPTCoordMessages())) {
+	if(millis() > (lastHealthCheck + singleMan->radioMan()->getIntervalNTPCoordMessages())) {
 
 		// always update the local health
 		singleMan->healthMan()->updateSentryNTPRequestTime(singleMan->addrMan()->getAddress(), millis());
@@ -160,7 +160,7 @@ void loop() {
 
 void serverLoop() {
 	static unsigned long nextColorMessage = millis() + singleMan->radioMan()->getIntervalColorMessages();
-	static unsigned long nextNTPCoordMessage = millis() + singleMan->radioMan()->getIntervalNPTCoordMessages();
+	static unsigned long nextNTPCoordMessage = millis() + singleMan->radioMan()->getIntervalNTPCoordMessages();
 
 	// Handle any messages in the queue
 	byte address = singleMan->addrMan()->getAddress();
@@ -203,7 +203,7 @@ void serverLoop() {
 
 	// Send coord messages
 	if(millis() > nextNTPCoordMessage) {
-		nextNTPCoordMessage = millis() + singleMan->radioMan()->getIntervalNPTCoordMessages();
+		nextNTPCoordMessage = millis() + singleMan->radioMan()->getIntervalNTPCoordMessages();
 
 		// If there is only one sentry, don't bother sending anything NTP_COORD_MESSAGES
 		if(singleMan->healthMan()->totalSentries() > 1) {
@@ -220,7 +220,11 @@ void serverLoop() {
 
 	// Send the Color Message if it's time to update the nextColorMessage
 	// OR if there is a button being pressed that'll change the pattern
-	if(millis() > nextColorMessage || singleMan->inputMan()->hasUnhandledInput()) {
+	// if there is any sentries that have been added but haven't synced their time
+	// don't send COLOR_MESSAGE_TO_SENTRY as it'll get in the way of the NTP requests
+	if(singleMan->healthMan()->anyNonSyncedSentries() == false &&
+		(millis() > nextColorMessage || singleMan->inputMan()->hasUnhandledInput()))
+	{
 		nextColorMessage = millis() + singleMan->radioMan()->getIntervalColorMessages();
 
 		// generate newPatterns for LEDs since the interrupt will do the painting
@@ -332,9 +336,7 @@ void sentryLoop() {
 
 	// Send a keep_alive response to server
 	if (millis() > timeOfNextKeepAlive) {
-
-		timeOfNextKeepAlive = millis() + singleMan->radioMan()->getIntervalNPTCoordMessages()
-			+ micros()%(singleMan->radioMan()->getIntervalNPTCoordMessages());
+		timeOfNextKeepAlive = millis() + (singleMan->healthMan()->getDeathOffset() / 3);
 
 		RF24Message* responseMessage = new RF24Message();
 		responseMessage->messageType = KEEP_ALIVE_FROM_SENTRY;

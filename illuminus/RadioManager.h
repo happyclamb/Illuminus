@@ -21,7 +21,7 @@ class RadioManager
 
 		unsigned int generateUID();
 
-		unsigned long getIntervalNPTCoordMessages(){ return this->INTERVAL_NTP_COORD_MSGS; }
+		unsigned long getIntervalNTPCoordMessages(){ return this->INTERVAL_NTP_COORD_MSGS; }
 		unsigned long getIntervalColorMessages(){ return this->INTERVAL_COLOR_MSGS; }
 		void setIntervalColorMessages(unsigned long newInterval){ this->INTERVAL_COLOR_MSGS = newInterval; }
 
@@ -66,7 +66,7 @@ class RadioManager
 
 		unsigned long INTERVAL_COLOR_MSGS = 1511;
 		unsigned long INTERVAL_NTP_COORD_MSGS = 7307;
-		unsigned long NTP_REQUEST_TIMEOUT = 5003;
+		unsigned long NTP_REQUEST_TIMEOUT = 751;
 		byte TRANSMISSION_WINDOW_SIZE = 23;
 
 		void resetRadio();

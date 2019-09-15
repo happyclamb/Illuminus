@@ -111,6 +111,27 @@ byte HealthManager::getOldestNTPRequest() {
 }
 
 
+bool HealthManager::anyNonSyncedSentries() {
+	bool returnVal = false;
+	SentryHealthNode *currNode = this->healthQueue;
+
+	// If nothing is found then sentry '0' is next
+	if(currNode != NULL) {
+		// Check healths before looking for IDs
+		checkAllSentryHealth();
+
+		while(currNode != NULL) {
+			if(currNode->health->isAlive && currNode->health->last_NTP_request == 0) {
+				returnVal = true;
+			}
+			currNode = currNode->next;
+		}
+	}
+
+	return returnVal;
+}
+
+
 void HealthManager::checkAllSentryHealth() {
 	SentryHealthNode *currNode = this->healthQueue;
 
