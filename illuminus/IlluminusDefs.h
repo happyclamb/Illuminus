@@ -54,8 +54,8 @@ enum NTP_state:byte {
 // #define serialTX 1     // Used for serial debugging
 #define RADIO_INT_PIN 2   // Digital || INT_1=0 future change to migrate this to IRQ for RF24
 #define RGB_STRIP_PIN 4   // Digital
-#define ZONE_0_PIN 5      // Digital || PWM
-#define ZONE_1_PIN 6      // Digital || PWM
+#define ZONE_PIN 5        // Digital || PWM
+#define HAS_CONTROL_BOX_PIN 6     // Digital || PWM
 #define RADIO_CHIP_ENABLE_PIN 7   // Digital
 #define RADIO_CHIP_SELECT_PIN 8   // Digital || CLOCK_0
 #define BIG_LED_PIN 9     // Digital || PWM

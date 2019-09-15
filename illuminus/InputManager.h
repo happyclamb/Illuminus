@@ -11,13 +11,14 @@ class InputManager
 	public:
 		InputManager(SingletonManager* _singleMan);
 
-		bool isInteractiveMode() { return this->interactive_mode > 0; }
+		bool isInteractiveMode() { return this->hasControlBox() && this->interactive_mode > 0; }
 		void setInteractiveMode(bool newMode) { this->interactive_mode = newMode ? millis() : 0; }
 
 		void showOptions();
 		void updateValues();
 
 		byte getZoneInput() { return this->zoneInput; }
+		bool hasControlBox() { return this->isControlBox; }
 
 		bool hasUnhandledInput();
 		bool isButtonPressed(byte index);
@@ -35,6 +36,7 @@ class InputManager
 		unsigned long POT_READ_SENSITIVITY = 2;
 
 		byte zoneInput = 0;
+		bool isControlBox = false;
 
 		int button_pins[5];
 		unsigned long button_last_pressed[5];

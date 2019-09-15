@@ -60,14 +60,10 @@ SentryHealth* HealthManager::findSentry(byte id) {
 byte HealthManager::nextAvailSentryID() {
 	SentryHealthNode *currNode = this->healthQueue;
 
-	// If nothing is found then sentry '0' is next
-	if(currNode == NULL)
-		return 0;
-
 	// Check healths before looking for IDs
 	checkAllSentryHealth();
 
-	int nextID = 0;
+	byte nextID = 0;
 	while(currNode != NULL) {
 
 		// If we found a dead sentry, reuse the ID
@@ -86,10 +82,6 @@ byte HealthManager::nextAvailSentryID() {
 
 byte HealthManager::getOldestNTPRequest() {
 	SentryHealthNode *currNode = this->healthQueue;
-
-	// If nothing is found then sentry '0' is next
-	if(currNode == NULL)
-		return 0;
 
 	// Check healths before looking for IDs
 	checkAllSentryHealth();
@@ -191,40 +183,42 @@ void HealthManager::printHealth(OUTPUT_LOG_TYPES log_level) {
 		singleMan->outputMan()->println(log_level, F("------- HealthManager -------"));
 		singleMan->outputMan()->print(log_level, F("currTime> "));
 		singleMan->outputMan()->print(log_level, millis());
-		singleMan->outputMan()->print(log_level, F("  adjustedTime> "));
+		singleMan->outputMan()->print(log_level, F(" adjustedTime> "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->getAdjustedMillis());
-		singleMan->outputMan()->print(log_level, F("  sentryCount> "));
+		singleMan->outputMan()->print(log_level, F(" sentryCount> "));
 		singleMan->outputMan()->print(log_level, sentryCount);
-		singleMan->outputMan()->print(log_level, F("  zone> "));
+		singleMan->outputMan()->print(log_level, F(" zone> "));
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getZone());
-		singleMan->outputMan()->print(log_level, F("  this.address> "));
+		singleMan->outputMan()->print(log_level, F(" hasControlBox> "));
+		singleMan->outputMan()->print(log_level, singleMan->inputMan()->hasControlBox());
+		singleMan->outputMan()->print(log_level, F(" this.address> "));
 		singleMan->outputMan()->print(log_level, singleMan->addrMan()->getAddress());
-		singleMan->outputMan()->print(log_level, F("  interference> "));
+		singleMan->outputMan()->print(log_level, F(" interference> "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->checkForInterference());
-		singleMan->outputMan()->print(log_level, F("  freeMemory> "));
+		singleMan->outputMan()->print(log_level, F(" freeMemory> "));
 		singleMan->outputMan()->println(log_level, freeMemory());
 
-		singleMan->outputMan()->print(log_level, F("stacksize>  receive> "));
+		singleMan->outputMan()->print(log_level, F("stacksize> receive> "));
 		singleMan->outputMan()->print(log_level, singleMan->radioMan()->receiveStackSize());
-		singleMan->outputMan()->print(log_level, F("  send> "));
+		singleMan->outputMan()->print(log_level, F(" send> "));
 		singleMan->outputMan()->println(log_level, singleMan->radioMan()->sendStackSize());
 
-		singleMan->outputMan()->print(log_level, F("    currPattern> "));
+		singleMan->outputMan()->print(log_level, F("  currPattern> "));
 		singleMan->lightMan()->getCurrPattern()->printlnPattern(singleMan, log_level);
-		singleMan->outputMan()->print(log_level, F("    nextPattern > "));
+		singleMan->outputMan()->print(log_level, F("  nextPattern> "));
 		singleMan->lightMan()->getNextPattern()->printlnPattern(singleMan, log_level);
 
 		byte i=0;
 		while(currNode != NULL) {
-			singleMan->outputMan()->print(log_level, F("  id:"));
+			singleMan->outputMan()->print(log_level, F(" id:"));
 			singleMan->outputMan()->print(log_level, currNode->health->id);
-			singleMan->outputMan()->print(log_level, F("  isAlive:"));
+			singleMan->outputMan()->print(log_level, F(" isAlive:"));
 			singleMan->outputMan()->print(log_level, currNode->health->isAlive);
-			singleMan->outputMan()->print(log_level, F("  lastRequest:"));
+			singleMan->outputMan()->print(log_level, F(" lastRequest:"));
 			singleMan->outputMan()->print(log_level, currNode->health->last_message);
-			singleMan->outputMan()->print(log_level, F("  lastNTP:"));
+			singleMan->outputMan()->print(log_level, F(" lastNTP:"));
 			singleMan->outputMan()->print(log_level, currNode->health->last_NTP_request);
-			singleMan->outputMan()->print(log_level, F("  lightLevel:"));
+			singleMan->outputMan()->print(log_level, F(" lightLevel:"));
 			singleMan->outputMan()->println(log_level, currNode->health->last_light_level);
 
 			i++;

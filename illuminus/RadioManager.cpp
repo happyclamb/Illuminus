@@ -436,7 +436,9 @@ NTP_state RadioManager::handleNTPServerOffset(long serverNTPOffset) {
 		// If there are 3 fails; then reset internal variables and
 		//	stop the round of NTP. Wait until next NTP_COORD_MESSAGE
 		//	as likely	the server has died.
-		if(fails == 3) {
+		// Unless this is the first time trying to connect to the server
+		// because that will have a LOT of fails as it attempts to sync
+		if(fails == 3 && singleMan->radioMan()->getMillisOffset() > 0) {
 			fails = 0;
 			currOffsetIndex = 0;
 			returnState = NTP_DONE;
@@ -478,6 +480,7 @@ NTP_state RadioManager::handleNTPServerOffset(long serverNTPOffset) {
 		sendMessage(ntpClientFinished);
 
 		// reset variables to wait for next NTP sync
+		fails = 0;
 		currOffsetIndex = 0;
 		returnState = NTP_DONE;
 	}

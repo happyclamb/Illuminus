@@ -5,8 +5,8 @@ InputManager::InputManager(SingletonManager* _singleMan) :
 	singleMan(_singleMan)
 {
 	// Setup the zone pins
-	pinMode(ZONE_0_PIN, INPUT_PULLUP);
-	pinMode(ZONE_1_PIN, INPUT_PULLUP);
+	pinMode(ZONE_PIN, INPUT_PULLUP);
+	pinMode(HAS_CONTROL_BOX_PIN, INPUT_PULLUP);
 
 	// Setup the digital inputs
 	this->button_pins[0] = INPUT1_PIN;   pinMode(this->button_pins[0], INPUT_PULLUP);
@@ -74,11 +74,10 @@ void InputManager::updateValues() {
 		this->setInteractiveMode(false);
 	}
 
-	zoneInput = 0;
-	if(digitalRead(ZONE_0_PIN) == LOW)
-		zoneInput += 1;
-	if(digitalRead(ZONE_1_PIN) == LOW)
-		zoneInput += 2;
+	this->zoneInput = (digitalRead(ZONE_PIN) == LOW) ? 1 : 0;
+
+	if(digitalRead(HAS_CONTROL_BOX_PIN) == LOW)
+		this->isControlBox = true;
 
 	// Poll all the buttons and get them ready for servicing
 	for(byte i=0; i<5; i++) {
