@@ -473,7 +473,7 @@ void LightManager::walkingLights(byte patternSpeed, byte brightnessSpeed,
 	unsigned long currTime = singleMan->radioMan()->getAdjustedMillis();
 	float brightnessFloat = this->cosFade(initialBrightness, brightnessSpeed, syncedBrightness);
 
-	unsigned long colorTimeBetweenSteps = patternSpeed*10;
+	unsigned long colorTimeBetweenSteps = patternSpeed*5;
 	unsigned long totalSteps = singleMan->healthMan()->totalSentries();
 	byte currStep = (currTime%(totalSteps*colorTimeBetweenSteps))/colorTimeBetweenSteps;
 
