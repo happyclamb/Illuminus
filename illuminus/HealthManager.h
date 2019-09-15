@@ -35,7 +35,7 @@ class HealthManager
 			{ this->updateSentryInfo(id, 0, 0, lightLevel); }
 
 		byte totalSentries() { return this->sentryCount; }
-		byte nextAvailSentryID();
+		byte getAndAddNextAvailSentryID();
 		byte getOldestNTPRequest();
 		bool anyNonSyncedSentries();
 		SentryHealth* findSentry(byte id);

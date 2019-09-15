@@ -57,7 +57,7 @@ SentryHealth* HealthManager::findSentry(byte id) {
 }
 
 
-byte HealthManager::nextAvailSentryID() {
+byte HealthManager::getAndAddNextAvailSentryID() {
 	SentryHealthNode *currNode = this->healthQueue;
 
 	// Check healths before looking for IDs
@@ -76,6 +76,7 @@ byte HealthManager::nextAvailSentryID() {
 		currNode = currNode->next;
 	}
 
+	this->addSentry(nextID);
 	return nextID;
 }
 
